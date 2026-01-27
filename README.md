@@ -28,8 +28,4 @@ This is a basic Discord bot template written in Python using `discord.py`.
 *   `!echo <message>`: Repeats the provided message.
 *   `!roll [sides]`: Rolls a dice with the specified number of sides (default is 6).
 *   `!8ball <question>`: Provides a magic 8-ball response to your question.
-<<<<<<< HEAD
-*   `!setup_ticket`: Creates a panel with a button to open support tickets.
-=======
-*   `!setup_ticket`: Creates a panel with a button to open support tickets.
->>>>>>> 2cd0fb9234afb6341ef1a050816d61aa99b80de9
+*   `!setup_ticket`: Creates a panel with a dropdown menu to open support tickets (Roles, Report Staff, Report User, Questions, Others).
