@@ -12,6 +12,7 @@ This is a basic Discord bot template written in Python using `discord.py`.
 2.  **Configuration:**
     *   Copy `.env.example` to `.env`.
     *   Replace `your_token_here` with your actual Discord bot token.
+    *   Set the Role IDs for permissions (Low Staff, Jr Mod, Mod, Sr Mod, Admin, Sr Admin).
 
     ```bash
     cp .env.example .env

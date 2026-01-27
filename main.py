@@ -12,6 +12,14 @@ import database
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
+# Role IDs for permissions
+LOW_STAFF_ROLE_ID = int(os.getenv('LOW_STAFF_ROLE_ID', 0))
+JR_MOD_ROLE_ID = int(os.getenv('JR_MOD_ROLE_ID', 0))
+MOD_ROLE_ID = int(os.getenv('MOD_ROLE_ID', 0))
+SR_MOD_ROLE_ID = int(os.getenv('SR_MOD_ROLE_ID', 0))
+ADMIN_ROLE_ID = int(os.getenv('ADMIN_ROLE_ID', 0))
+SR_ADMIN_ROLE_ID = int(os.getenv('SR_ADMIN_ROLE_ID', 0))
+
 # Set up intents
 intents = discord.Intents.default()
 intents.message_content = True
