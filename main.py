@@ -1,9 +1,11 @@
 import os
 import random
 import asyncio
+import datetime
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+import database
 
 # Load environment variables
 load_dotenv()
@@ -34,11 +36,11 @@ class TicketLauncher(discord.ui.View):
         placeholder="Select a ticket option...",
         custom_id="ticket_select",
         options=[
-            discord.SelectOption(label="Roles", value="roles", description="Request or change roles"),
-            discord.SelectOption(label="Report Staff", value="report_staff", description="Report a staff member"),
-            discord.SelectOption(label="Report User", value="report_user", description="Report a user"),
-            discord.SelectOption(label="Questions", value="questions", description="Ask a question"),
-            discord.SelectOption(label="Others", value="others", description="Other inquiries"),
+            discord.SelectOption(label="Roles", value="roles", description="Request or change roles", emoji="🎭"),
+            discord.SelectOption(label="Report Staff", value="report_staff", description="Report a staff member", emoji="🛡️"),
+            discord.SelectOption(label="Report User", value="report_user", description="Report a user", emoji="⚠️"),
+            discord.SelectOption(label="Questions", value="questions", description="Ask a question", emoji="❓"),
+            discord.SelectOption(label="Others", value="others", description="Other inquiries", emoji="📝"),
         ]
     )
     async def create_ticket(self, interaction: discord.Interaction, select: discord.ui.Select):
@@ -97,6 +99,81 @@ async def setup_ticket(ctx):
         color=discord.Color.blue()
     )
     await ctx.send(embed=embed, view=TicketLauncher())
+
+def convert_duration(duration: str):
+    """Converts a duration string (e.g., '10m', '1h') to timedelta."""
+    try:
+        unit = duration[-1]
+        value = int(duration[:-1])
+        if unit == 's':
+            return datetime.timedelta(seconds=value)
+        elif unit == 'm':
+            return datetime.timedelta(minutes=value)
+        elif unit == 'h':
+            return datetime.timedelta(hours=value)
+        elif unit == 'd':
+            return datetime.timedelta(days=value)
+    except (ValueError, IndexError):
+        return None
+    return None
+
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "No reason provided"):
+    delta = convert_duration(duration)
+    if not delta:
+        await ctx.send("Invalid duration format. Use s, m, h, or d (e.g., 10m).")
+        return
+
+    await member.timeout(delta, reason=reason)
+    await ctx.send(f"{member.mention} has been muted for {duration}. Reason: {reason}")
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def warn(ctx, member: discord.Member, *, reason: str = "No reason provided"):
+    database.add_warning(member.id, reason, ctx.author.id)
+    try:
+        await member.send(f"You have been warned in {ctx.guild.name}. Reason: {reason}")
+    except discord.Forbidden:
+        pass
+    await ctx.send(f"{member.mention} has been warned. Reason: {reason}")
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def warnings(ctx, member: discord.Member):
+    warnings_list = database.get_warnings(member.id)
+    if not warnings_list:
+        await ctx.send(f"{member.mention} has no warnings.")
+        return
+
+    embed = discord.Embed(title=f"Warnings for {member.name}", color=discord.Color.orange())
+    for reason, staff_id, timestamp in warnings_list:
+        staff_member = ctx.guild.get_member(staff_id)
+        staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
+        embed.add_field(
+            name=f"Date: {timestamp[:10]}",
+            value=f"**Reason:** {reason}\n**Staff:** {staff_name}",
+            inline=False
+        )
+    await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
+    await member.ban(reason=reason)
+    await ctx.send(f"{member.mention} has been banned. Reason: {reason}")
+
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def unban(ctx, user_id: int, *, reason: str = "No reason provided"):
+    try:
+        user = await bot.fetch_user(user_id)
+        await ctx.guild.unban(user, reason=reason)
+        await ctx.send(f"{user.mention} has been unbanned. Reason: {reason}")
+    except discord.NotFound:
+        await ctx.send("User not found.")
+    except discord.HTTPException:
+        await ctx.send("Failed to unban user.")
 
 @bot.command()
 async def ping(ctx):

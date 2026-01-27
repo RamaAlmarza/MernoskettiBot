@@ -37,3 +37,12 @@ async def test_setup_ticket_command_exists():
     command = bot.get_command('setup_ticket')
     assert command is not None
     assert command.name == 'setup_ticket'
+
+@pytest.mark.asyncio
+async def test_moderation_commands_exist():
+    # Check if moderation commands are registered
+    assert bot.get_command('mute') is not None
+    assert bot.get_command('warn') is not None
+    assert bot.get_command('warnings') is not None
+    assert bot.get_command('ban') is not None
+    assert bot.get_command('unban') is not None
