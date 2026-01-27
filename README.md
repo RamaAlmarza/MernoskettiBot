@@ -29,3 +29,10 @@ This is a basic Discord bot template written in Python using `discord.py`.
 *   `!roll [sides]`: Rolls a dice with the specified number of sides (default is 6).
 *   `!8ball <question>`: Provides a magic 8-ball response to your question.
 *   `!setup_ticket`: Creates a panel with a dropdown menu to open support tickets (Roles, Report Staff, Report User, Questions, Others).
+
+## Moderation
+
+*   `!mute <member> <duration> [reason]`: Mutes a member for the specified duration (e.g., 10m, 1h). Requires `moderate_members` permission.
+*   `!warn <member> [reason]`: Warns a member and logs it to the database. Requires `manage_messages` permission.
+*   `!warnings <member>`: Lists warnings for a specific member. Requires `manage_messages` permission.
+*   `!ban <member> [reason]`: Bans a member from the server. Requires `ban_members` permission.
