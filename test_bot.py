@@ -46,3 +46,10 @@ async def test_moderation_commands_exist():
     assert bot.get_command('warnings') is not None
     assert bot.get_command('ban') is not None
     assert bot.get_command('unban') is not None
+
+@pytest.mark.asyncio
+async def test_sync_command_exists():
+    # Check if the 'sync' command is registered
+    command = bot.get_command('sync')
+    assert command is not None
+    assert command.name == 'sync'

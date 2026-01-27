@@ -99,6 +99,16 @@ async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
 
+@bot.command()
+@commands.is_owner()
+async def sync(ctx):
+    """Syncs commands to the current guild for instant updates."""
+    try:
+        synced = await bot.tree.sync(guild=ctx.guild)
+        await ctx.send(f"Synced {len(synced)} command(s) to this guild.")
+    except Exception as e:
+        await ctx.send(f"Failed to sync commands: {e}")
+
 @bot.hybrid_command(description="Sets up the ticket system panel.")
 async def setup_ticket(ctx):
     """Sets up the ticket system panel."""

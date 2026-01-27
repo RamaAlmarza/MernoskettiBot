@@ -39,3 +39,7 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 *   `/warnings <member>`: Lists warnings for a specific member. Requires `manage_messages` permission.
 *   `/ban <member> [reason]`: Bans a member from the server. Requires `ban_members` permission.
 *   `/unban <user_id> [reason]`: Unbans a user from the server using their ID. Requires `ban_members` permission.
+
+## Utilities
+
+*   `!sync`: Syncs the slash commands to the current guild immediately. Useful for testing. Requires Bot Owner permission.
