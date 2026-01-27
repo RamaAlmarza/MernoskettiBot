@@ -36,3 +36,4 @@ This is a basic Discord bot template written in Python using `discord.py`.
 *   `!warn <member> [reason]`: Warns a member and logs it to the database. Requires `manage_messages` permission.
 *   `!warnings <member>`: Lists warnings for a specific member. Requires `manage_messages` permission.
 *   `!ban <member> [reason]`: Bans a member from the server. Requires `ban_members` permission.
+*   `!unban <user_id> [reason]`: Unbans a user from the server using their ID. Requires `ban_members` permission.

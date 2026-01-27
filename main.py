@@ -164,6 +164,18 @@ async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"
     await ctx.send(f"{member.mention} has been banned. Reason: {reason}")
 
 @bot.command()
+@commands.has_permissions(ban_members=True)
+async def unban(ctx, user_id: int, *, reason: str = "No reason provided"):
+    try:
+        user = await bot.fetch_user(user_id)
+        await ctx.guild.unban(user, reason=reason)
+        await ctx.send(f"{user.mention} has been unbanned. Reason: {reason}")
+    except discord.NotFound:
+        await ctx.send("User not found.")
+    except discord.HTTPException:
+        await ctx.send("Failed to unban user.")
+
+@bot.command()
 async def ping(ctx):
     await ctx.send('Pong!')
 

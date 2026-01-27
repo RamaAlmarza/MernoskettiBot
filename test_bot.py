@@ -45,3 +45,4 @@ async def test_moderation_commands_exist():
     assert bot.get_command('warn') is not None
     assert bot.get_command('warnings') is not None
     assert bot.get_command('ban') is not None
+    assert bot.get_command('unban') is not None
