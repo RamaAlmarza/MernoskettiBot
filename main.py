@@ -34,7 +34,7 @@ class TicketLauncher(discord.ui.View):
     async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         category = discord.utils.get(guild.categories, name="Tickets")
-        
+
         if not category:
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -43,7 +43,7 @@ class TicketLauncher(discord.ui.View):
             category = await guild.create_category("Tickets", overwrites=overwrites)
 
         channel_name = f"ticket-{interaction.user.name}"
-        
+
         # Check if channel already exists
         existing_channel = discord.utils.get(guild.text_channels, name=channel_name.lower())
         if existing_channel:
@@ -57,13 +57,13 @@ class TicketLauncher(discord.ui.View):
         }
 
         channel = await guild.create_text_channel(name=channel_name, category=category, overwrites=overwrites)
-        
+
         embed = discord.Embed(
             title="Ticket Created",
             description=f"Hello {interaction.user.mention}, support will be with you shortly.",
             color=discord.Color.green()
         )
-        
+
         await channel.send(embed=embed, view=TicketControls())
         await interaction.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
 
