@@ -28,3 +28,4 @@ if __name__ == '__main__':
         bot.run(TOKEN)
     else:
         print("Error: DISCORD_TOKEN not found in environment variables.")
+        print("Please create a .env file (you can copy .env.example) and add your DISCORD_TOKEN.")
