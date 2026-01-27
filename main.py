@@ -30,8 +30,19 @@ class TicketLauncher(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Create Ticket", style=discord.ButtonStyle.blurple, custom_id="ticket_create", emoji="📩")
-    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.select(
+        placeholder="Select a ticket option...",
+        custom_id="ticket_select",
+        options=[
+            discord.SelectOption(label="Roles", value="roles", description="Request or change roles"),
+            discord.SelectOption(label="Report Staff", value="report_staff", description="Report a staff member"),
+            discord.SelectOption(label="Report User", value="report_user", description="Report a user"),
+            discord.SelectOption(label="Questions", value="questions", description="Ask a question"),
+            discord.SelectOption(label="Others", value="others", description="Other inquiries"),
+        ]
+    )
+    async def create_ticket(self, interaction: discord.Interaction, select: discord.ui.Select):
+        ticket_type = select.values[0]
         guild = interaction.guild
         category = discord.utils.get(guild.categories, name="Tickets")
 
@@ -42,12 +53,14 @@ class TicketLauncher(discord.ui.View):
             }
             category = await guild.create_category("Tickets", overwrites=overwrites)
 
-        channel_name = f"ticket-{interaction.user.name}"
+        # Sanitize username for channel name
+        safe_username = "".join(c for c in interaction.user.name if c.isalnum() or c in "-_").lower()
+        channel_name = f"ticket-{safe_username}-{ticket_type}"
 
         # Check if channel already exists
         existing_channel = discord.utils.get(guild.text_channels, name=channel_name.lower())
         if existing_channel:
-            await interaction.response.send_message(f"You already have a ticket open: {existing_channel.mention}", ephemeral=True)
+            await interaction.response.send_message(f"You already have a ticket open for this topic: {existing_channel.mention}", ephemeral=True)
             return
 
         overwrites = {
@@ -60,7 +73,7 @@ class TicketLauncher(discord.ui.View):
 
         embed = discord.Embed(
             title="Ticket Created",
-            description=f"Hello {interaction.user.mention}, support will be with you shortly.",
+            description=f"Hello {interaction.user.mention}, support will be with you shortly.\n\n**Topic:** {ticket_type.replace('_', ' ').title()}",
             color=discord.Color.green()
         )
 
