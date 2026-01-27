@@ -30,3 +30,10 @@ async def test_8ball_command_exists():
     command = bot.get_command('8ball')
     assert command is not None
     assert command.name == '8ball'
+
+@pytest.mark.asyncio
+async def test_setup_ticket_command_exists():
+    # Check if the 'setup_ticket' command is registered
+    command = bot.get_command('setup_ticket')
+    assert command is not None
+    assert command.name == 'setup_ticket'
