@@ -31,6 +31,7 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 *   `/roll [sides]`: Rolls a dice with the specified number of sides (default is 6).
 *   `/8ball <question>`: Provides a magic 8-ball response to your question.
 *   `/setup_ticket`: Creates a panel with a dropdown menu to open support tickets (Roles, Report Staff, Report User, Questions, Others).
+    *   **Ticket Controls:** Tickets include a "Close Ticket" button for all users and a "Claim Ticket" button for staff (requires `manage_messages` permission).
 
 ## Moderation
 

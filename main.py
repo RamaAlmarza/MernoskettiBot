@@ -23,6 +23,19 @@ class TicketControls(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
+    @discord.ui.button(label="Claim Ticket", style=discord.ButtonStyle.green, custom_id="ticket_claim", emoji="🙋")
+    async def claim_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not interaction.user.guild_permissions.manage_messages:
+            await interaction.response.send_message("You do not have permission to claim tickets.", ephemeral=True)
+            return
+
+        button.disabled = True
+        button.label = f"Claimed by {interaction.user.name}"
+        button.style = discord.ButtonStyle.grey
+
+        await interaction.response.edit_message(view=self)
+        await interaction.channel.send(f"{interaction.user.mention} has claimed this ticket!")
+
     @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.red, custom_id="ticket_close", emoji="🔒")
     async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("Closing ticket in 5 seconds...", ephemeral=True)
