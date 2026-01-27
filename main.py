@@ -3,6 +3,7 @@ import random
 import asyncio
 import datetime
 import discord
+from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 import database
@@ -87,10 +88,18 @@ async def on_ready():
     # Register persistent views
     bot.add_view(TicketLauncher())
     bot.add_view(TicketControls())
+
+    # Sync slash commands
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(f"Failed to sync commands: {e}")
+
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
 
-@bot.command()
+@bot.hybrid_command(description="Sets up the ticket system panel.")
 async def setup_ticket(ctx):
     """Sets up the ticket system panel."""
     embed = discord.Embed(
@@ -117,18 +126,20 @@ def convert_duration(duration: str):
         return None
     return None
 
-@bot.command()
+@bot.hybrid_command(description="Mutes a member for the specified duration.")
+@app_commands.describe(duration="Duration (e.g., 10m, 1h)", reason="Reason for the mute")
 @commands.has_permissions(moderate_members=True)
 async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "No reason provided"):
     delta = convert_duration(duration)
     if not delta:
-        await ctx.send("Invalid duration format. Use s, m, h, or d (e.g., 10m).")
+        await ctx.send("Invalid duration format. Use s, m, h, or d (e.g., 10m).", ephemeral=True)
         return
 
     await member.timeout(delta, reason=reason)
     await ctx.send(f"{member.mention} has been muted for {duration}. Reason: {reason}")
 
-@bot.command()
+@bot.hybrid_command(description="Warns a member.")
+@app_commands.describe(reason="Reason for the warning")
 @commands.has_permissions(manage_messages=True)
 async def warn(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     database.add_warning(member.id, reason, ctx.author.id)
@@ -138,7 +149,7 @@ async def warn(ctx, member: discord.Member, *, reason: str = "No reason provided
         pass
     await ctx.send(f"{member.mention} has been warned. Reason: {reason}")
 
-@bot.command()
+@bot.hybrid_command(description="Lists warnings for a specific member.")
 @commands.has_permissions(manage_messages=True)
 async def warnings(ctx, member: discord.Member):
     warnings_list = database.get_warnings(member.id)
@@ -157,39 +168,47 @@ async def warnings(ctx, member: discord.Member):
         )
     await ctx.send(embed=embed)
 
-@bot.command()
+@bot.hybrid_command(description="Bans a member from the server.")
+@app_commands.describe(reason="Reason for the ban")
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     await member.ban(reason=reason)
     await ctx.send(f"{member.mention} has been banned. Reason: {reason}")
 
-@bot.command()
+@bot.hybrid_command(description="Unbans a user from the server using their ID.")
+@app_commands.describe(user_id="The ID of the user to unban", reason="Reason for the unban")
 @commands.has_permissions(ban_members=True)
-async def unban(ctx, user_id: int, *, reason: str = "No reason provided"):
+async def unban(ctx, user_id: str, *, reason: str = "No reason provided"):
     try:
-        user = await bot.fetch_user(user_id)
+        user_id_int = int(user_id)
+        user = await bot.fetch_user(user_id_int)
         await ctx.guild.unban(user, reason=reason)
         await ctx.send(f"{user.mention} has been unbanned. Reason: {reason}")
+    except ValueError:
+        await ctx.send("Invalid User ID format.", ephemeral=True)
     except discord.NotFound:
-        await ctx.send("User not found.")
+        await ctx.send("User not found.", ephemeral=True)
     except discord.HTTPException:
-        await ctx.send("Failed to unban user.")
+        await ctx.send("Failed to unban user.", ephemeral=True)
 
-@bot.command()
+@bot.hybrid_command(description="Responds with Pong!")
 async def ping(ctx):
     await ctx.send('Pong!')
 
-@bot.command()
+@bot.hybrid_command(description="Repeats the provided message.")
+@app_commands.describe(message="The message to repeat")
 async def echo(ctx, *, message: str):
     await ctx.send(message)
 
-@bot.command()
+@bot.hybrid_command(description="Rolls a dice.")
+@app_commands.describe(sides="Number of sides on the dice")
 async def roll(ctx, sides: int = 6):
     result = random.randint(1, sides)
     await ctx.send(str(result))
 
-@bot.command(name='8ball')
-async def eight_ball(ctx, *, question):
+@bot.hybrid_command(name='8ball', description="Ask the magic 8-ball a question.")
+@app_commands.describe(question="The question to ask")
+async def eight_ball(ctx, *, question: str):
     responses = [
         "It is certain.",
         "It is decidedly so.",
