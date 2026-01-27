@@ -25,3 +25,6 @@ This is a basic Discord bot template written in Python using `discord.py`.
 ## Features
 
 *   `!ping`: Responds with "Pong!".
+*   `!echo <message>`: Repeats the provided message.
+*   `!roll [sides]`: Rolls a dice with the specified number of sides (default is 6).
+*   `!8ball <question>`: Provides a magic 8-ball response to your question.
