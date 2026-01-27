@@ -36,11 +36,11 @@ class TicketLauncher(discord.ui.View):
         placeholder="Select a ticket option...",
         custom_id="ticket_select",
         options=[
-            discord.SelectOption(label="Roles", value="roles", description="Request or change roles"),
-            discord.SelectOption(label="Report Staff", value="report_staff", description="Report a staff member"),
-            discord.SelectOption(label="Report User", value="report_user", description="Report a user"),
-            discord.SelectOption(label="Questions", value="questions", description="Ask a question"),
-            discord.SelectOption(label="Others", value="others", description="Other inquiries"),
+            discord.SelectOption(label="Roles", value="roles", description="Request or change roles", emoji="🎭"),
+            discord.SelectOption(label="Report Staff", value="report_staff", description="Report a staff member", emoji="🛡️"),
+            discord.SelectOption(label="Report User", value="report_user", description="Report a user", emoji="⚠️"),
+            discord.SelectOption(label="Questions", value="questions", description="Ask a question", emoji="❓"),
+            discord.SelectOption(label="Others", value="others", description="Other inquiries", emoji="📝"),
         ]
     )
     async def create_ticket(self, interaction: discord.Interaction, select: discord.ui.Select):
