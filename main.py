@@ -377,7 +377,7 @@ async def on_raw_reaction_remove(payload):
                     await member.remove_roles(role)
 
 @bot.hybrid_command(description="Syncs commands to the current guild for instant updates.")
-@commands.is_owner()
+@has_permission('ADMIN_ROLE_ID')
 async def sync(ctx):
     """Syncs commands to the current guild for instant updates."""
     try:
