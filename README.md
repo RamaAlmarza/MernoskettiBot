@@ -68,6 +68,34 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 
 *   `/star <message_id>`: Sends a message to the starred channel. Requires **Low Staff** or higher.
 *   `/av <user_id>`: Displays a user's avatar.
+*   `/userinfo <member>`: Shows information about a user.
+*   `/serverinfo`: Shows information about the server.
+*   `/servericon`: Displays the server icon.
+*   `/announce <channel> <message>`: Sends an official announcement. Requires **Sr Admin** or higher.
+*   `/clear <amount>`: Deletes a specified number of messages. Requires **Low Staff** or higher.
+
+## Features
+
+### Trivia & Ranking
+*   `/trivia [difficulty]`: Starts a trivia game.
+*   `/pregunta <channel> <question> <answer> <time> <reward>`: Creates a custom trivia question. Requires **Low Staff**.
+*   `/rank [member]`: Shows your current rank and points.
+*   `/ranking [reset]`: Shows the top 10 leaderboard. Reset requires **Sr Admin**.
+*   `/addpoints <member> <amount>`: Adds points to a user. Requires **Low Staff**.
+*   `/removepoints <member> <amount|all>`: Removes points from a user. Requires **Low Staff**.
+
+### Autorole
+*   `/autorole <channel> <message_id> <emoji> <role>`: Configures a reaction role. Requires **Admin**.
+
+### CSV Management (Devoluciones)
+*   `/csv ...`: Adds data to the returns CSV. (Restricted to specific users).
+*   `/getcsv`: Retrieves the CSV file.
+*   `/delcsv <row_id>`: Deletes a row.
+*   `/resetcsv`: Resets the CSV.
+
+### Configuration
+*   `/language <lang>`: Changes bot language (es/en). Requires **Admin**.
+*   `/prefix <new_prefix>`: Changes command prefix. Requires **Admin**.
 
 ### Automatic Starboard
 
