@@ -376,7 +376,7 @@ async def on_raw_reaction_remove(payload):
                 if role and member:
                     await member.remove_roles(role)
 
-@bot.command()
+@bot.hybrid_command(description="Syncs commands to the current guild for instant updates.")
 @commands.is_owner()
 async def sync(ctx):
     """Syncs commands to the current guild for instant updates."""
@@ -1038,6 +1038,7 @@ class ResetRankingView(View):
 # ---------- NEW COMMANDS ----------
 
 @bot.hybrid_command(name="language", description="Change the bot's language / Cambia el idioma del bot")
+@app_commands.describe(lang="The new language (es/en)")
 @has_permission('ADMIN_ROLE_ID')
 async def language(ctx, lang: str):
     lang = lang.lower()
@@ -1056,6 +1057,7 @@ async def language(ctx, lang: str):
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="prefix", description="Cambia el prefijo del bot (Solo staff) / Change the bot's prefix (Staff only)")
+@app_commands.describe(nuevo_prefijo="The new prefix")
 @has_permission('ADMIN_ROLE_ID')
 async def prefix(ctx, nuevo_prefijo: str):
     set_prefix(ctx.guild.id, nuevo_prefijo)
@@ -1065,6 +1067,7 @@ async def prefix(ctx, nuevo_prefijo: str):
     await ctx.send(f"✅ Prefix changed to: {nuevo_prefijo}")
 
 @bot.hybrid_command(name="announce", description="Hace un anuncio oficial (Solo staff) / Make an official announcement (Staff only)")
+@app_commands.describe(canal="The channel to announce in", mensaje="The message content")
 @has_permission('SR_ADMIN_ROLE_ID')
 async def announce(ctx, canal: discord.TextChannel, *, mensaje: str):
     embed = discord.Embed(title="📢 Announcement", description=mensaje, color=discord.Color.red(), timestamp=datetime.datetime.now())
@@ -1073,6 +1076,7 @@ async def announce(ctx, canal: discord.TextChannel, *, mensaje: str):
     await ctx.send("✅ Announcement sent.", ephemeral=True)
 
 @bot.hybrid_command(name="autorole", description="Configura un autorol / Set up an autorole")
+@app_commands.describe(canal="Channel where message is", mensaje_id="ID of the message", emoji="Emoji to react with", rol="Role to give")
 @has_permission('ADMIN_ROLE_ID')
 async def autorole(ctx, canal: discord.TextChannel, mensaje_id: str, emoji: str, rol: discord.Role):
     try:
@@ -1098,12 +1102,14 @@ async def autorole(ctx, canal: discord.TextChannel, mensaje_id: str, emoji: str,
         await ctx.send("❌ I don't have permissions to add reactions there.", ephemeral=True)
 
 @bot.hybrid_command(name="addpoints", description="Añade puntos a un usuario (Solo staff)")
+@app_commands.describe(member="The user to add points to", cantidad="Amount of points")
 @has_permission('LOW_STAFF_ROLE_ID')
 async def addpoints(ctx, member: discord.Member, cantidad: int):
     database.update_points(member.id, member.name, cantidad)
     await ctx.send(f"✅ Added {cantidad} points to {member.mention}")
 
 @bot.hybrid_command(name="removepoints", description="Quita puntos a un usuario (Solo staff)")
+@app_commands.describe(member="The user to remove points from", cantidad="Amount or 'all'")
 @has_permission('LOW_STAFF_ROLE_ID')
 async def removepoints(ctx, member: discord.Member, cantidad: str):
     if cantidad.lower() == "all":
@@ -1118,6 +1124,7 @@ async def removepoints(ctx, member: discord.Member, cantidad: str):
             await ctx.send("❌ Invalid amount.", ephemeral=True)
 
 @bot.hybrid_command(name="ranking", description="Muestra el ranking de puntos")
+@app_commands.describe(action="Optional action (e.g. 'reset')")
 async def ranking(ctx, action: str = None):
     if action and action.lower() == "reset":
         # Check permission for reset
@@ -1140,6 +1147,7 @@ async def ranking(ctx, action: str = None):
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="rank", description="Muestra los puntos de un usuario")
+@app_commands.describe(member="The user to check (defaults to self)")
 async def rank(ctx, member: discord.Member = None):
     member = member or ctx.author
     ranking_data = database.get_ranking()
@@ -1155,6 +1163,7 @@ async def rank(ctx, member: discord.Member = None):
     await ctx.send(f"📊 {member.mention} has no points yet.")
 
 @bot.hybrid_command(name="trivia", description="Inicia una trivia")
+@app_commands.describe(dificultad="Difficulty (easy, medium, hard)")
 async def trivia(ctx, dificultad: str = None):
     # Normalize difficulty
     if dificultad:
@@ -1205,6 +1214,7 @@ async def trivia(ctx, dificultad: str = None):
         await ctx.send(f"⏰ Time's up! The answer was: {q['answer']}/{q['respuesta']}")
 
 @bot.hybrid_command(name="pregunta", description="Crea una pregunta de trivia personalizada")
+@app_commands.describe(canal="Channel", pregunta="Question", respuesta_correcta="Answer", tiempo="Time (seconds)", premio="Points reward")
 @has_permission('LOW_STAFF_ROLE_ID')
 async def pregunta(ctx, canal: discord.TextChannel, pregunta: str, respuesta_correcta: str, tiempo: int, premio: int):
     embed = discord.Embed(title="🎯 Trivia Question", color=discord.Color.blue())
@@ -1229,6 +1239,7 @@ async def pregunta(ctx, canal: discord.TextChannel, pregunta: str, respuesta_cor
         await canal.send(f"⏰ Time's up! Answer: {respuesta_correcta}")
 
 @bot.hybrid_command(name="csv", description="Agrega datos al CSV")
+@app_commands.describe(usuario="User Name", id_usuario="User ID", rol="Role", dinero_devuelto="Amount Returned", numero_devolucion="Return #", fecha="Date")
 async def csv_cmd(ctx, usuario: str, id_usuario: str, rol: str, dinero_devuelto: str, numero_devolucion: str, fecha: str):
     if ctx.author.id not in CSV_ALLOWED_USERS:
         await ctx.send("❌ You are not allowed to use this command.", ephemeral=True)
@@ -1252,6 +1263,7 @@ async def getcsv(ctx):
         await ctx.send("❌ CSV not found or empty.")
 
 @bot.hybrid_command(name="delcsv", description="Elimina fila del CSV")
+@app_commands.describe(fila_id="Row ID to delete")
 async def delcsv(ctx, fila_id: int):
     if ctx.author.id not in CSV_ALLOWED_USERS:
         await ctx.send("❌ You are not allowed to use this command.", ephemeral=True)
@@ -1268,6 +1280,7 @@ async def resetcsv(ctx):
     await ctx.send("⚠️ Are you sure you want to reset the CSV?", view=view)
 
 @bot.hybrid_command(name="clear", description="Clear messages")
+@app_commands.describe(amount="Number of messages to clear (1-500)")
 @has_permission('LOW_STAFF_ROLE_ID')
 async def clear(ctx, amount: int):
     if amount < 1 or amount > 500:
@@ -1277,6 +1290,7 @@ async def clear(ctx, amount: int):
     await ctx.send(f"🧹 Deleted {len(deleted)} messages.", delete_after=5)
 
 @bot.hybrid_command(name="userinfo", description="User Information")
+@app_commands.describe(member="The user to show info for")
 async def userinfo(ctx, member: discord.Member = None):
     member = member or ctx.author
     embed = discord.Embed(title=f"User Info: {member.name}", color=discord.Color.blue())
