@@ -53,6 +53,7 @@ async def test_utility_commands_exist():
     assert bot.get_command('modlogs') is not None
     assert bot.get_command('modstats') is not None
     assert bot.get_command('moderations') is not None
+    assert bot.get_command('case') is not None
 
 @pytest.mark.asyncio
 async def test_sync_command_exists():

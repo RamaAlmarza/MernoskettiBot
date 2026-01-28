@@ -52,6 +52,7 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 *   `/modlogs <user_id>`: Shows all interactions (warns, mutes) with a user.
 *   `/modstats <user_id>`: Shows statistics of a moderator's actions.
 *   `/moderations`: Shows the last 50 moderation actions.
+*   `/case <case_id>`: Shows details of a specific moderation case.
 
 ## Notes
 

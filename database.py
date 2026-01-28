@@ -144,18 +144,30 @@ def log_action(action, user_id, staff_id, reason, extra_data=None):
         INSERT INTO moderation_logs (action, user_id, staff_id, reason, timestamp, extra_data)
         VALUES (?, ?, ?, ?, ?, ?)
     """, (action, user_id, staff_id, reason, timestamp, extra_data))
+    case_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    return case_id
 
 def get_mod_logs(user_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT action, staff_id, reason, timestamp, extra_data FROM moderation_logs WHERE user_id = ?
+        SELECT id, action, staff_id, reason, timestamp, extra_data FROM moderation_logs WHERE user_id = ?
     """, (user_id,))
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def get_case(case_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, action, user_id, staff_id, reason, timestamp, extra_data FROM moderation_logs WHERE id = ?
+    """, (case_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
 
 def get_mod_stats(staff_id):
     conn = sqlite3.connect(DB_NAME)

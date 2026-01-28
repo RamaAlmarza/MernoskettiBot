@@ -167,8 +167,8 @@ async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "No 
         return
 
     await member.timeout(delta, reason=reason)
-    database.log_action("MUTE", member.id, ctx.author.id, reason, duration)
-    await ctx.send(f"{member.mention} has been muted for {duration}. Reason: {reason}")
+    case_id = database.log_action("MUTE", member.id, ctx.author.id, reason, duration)
+    await ctx.send(f"{member.mention} has been muted for {duration}. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(description="Modifies the mute duration for a user.")
 @app_commands.describe(member="The member to modify", duration="New duration (e.g., 10m, 1h)")
@@ -180,16 +180,16 @@ async def duration(ctx, member: discord.Member, duration: str):
         return
 
     await member.timeout(delta, reason="Duration modified by staff")
-    database.log_action("MUTE_DURATION_EDIT", member.id, ctx.author.id, "Modified duration", duration)
-    await ctx.send(f"Updated mute duration for {member.mention} to {duration}.")
+    case_id = database.log_action("MUTE_DURATION_EDIT", member.id, ctx.author.id, "Modified duration", duration)
+    await ctx.send(f"Updated mute duration for {member.mention} to {duration}. (Case #{case_id})")
 
 @bot.hybrid_command(description="Kicks a member from the server.")
 @app_commands.describe(reason="Reason for the kick")
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     await member.kick(reason=reason)
-    database.log_action("KICK", member.id, ctx.author.id, reason)
-    await ctx.send(f"{member.mention} has been kicked. Reason: {reason}")
+    case_id = database.log_action("KICK", member.id, ctx.author.id, reason)
+    await ctx.send(f"{member.mention} has been kicked. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(description="Softbans a member (ban then unban) to delete messages.")
 @app_commands.describe(reason="Reason for the softban")
@@ -197,8 +197,8 @@ async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided
 async def softban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     await member.ban(reason=reason, delete_message_seconds=86400)
     await member.unban(reason="Softban unban")
-    database.log_action("SOFTBAN", member.id, ctx.author.id, reason)
-    await ctx.send(f"{member.mention} has been softbanned.")
+    case_id = database.log_action("SOFTBAN", member.id, ctx.author.id, reason)
+    await ctx.send(f"{member.mention} has been softbanned. (Case #{case_id})")
 
 @bot.hybrid_command(description="Locks the current channel.")
 @commands.has_permissions(manage_channels=True)
@@ -240,12 +240,12 @@ async def temprole(ctx, member: discord.Member, role: discord.Role, duration: st
 @commands.has_permissions(manage_messages=True)
 async def warn(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     database.add_warning(member.id, reason, ctx.author.id)
-    database.log_action("WARN", member.id, ctx.author.id, reason)
+    case_id = database.log_action("WARN", member.id, ctx.author.id, reason)
     try:
         await member.send(f"You have been warned in {ctx.guild.name}. Reason: {reason}")
     except discord.Forbidden:
         pass
-    await ctx.send(f"{member.mention} has been warned. Reason: {reason}")
+    await ctx.send(f"{member.mention} has been warned. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(name="warn-remove", description="Removes a specific warning.")
 @app_commands.describe(user_id="ID of the user", warn_id="ID of the warning to remove")
@@ -254,8 +254,8 @@ async def warn_remove(ctx, user_id: str, warn_id: int):
     try:
         user_id_int = int(user_id)
         if database.remove_warning(warn_id, user_id_int):
-            database.log_action("WARN_REMOVE", user_id_int, ctx.author.id, f"Removed warning {warn_id}")
-            await ctx.send(f"Removed warning {warn_id} for user {user_id}.")
+            case_id = database.log_action("WARN_REMOVE", user_id_int, ctx.author.id, f"Removed warning {warn_id}")
+            await ctx.send(f"Removed warning {warn_id} for user {user_id}. (Case #{case_id})")
         else:
             await ctx.send(f"Warning {warn_id} not found for user {user_id}.", ephemeral=True)
     except ValueError:
@@ -363,8 +363,8 @@ async def editnote(ctx, user_id: str, note_id: int, *, new_text: str):
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     await member.ban(reason=reason)
-    database.log_action("BAN", member.id, ctx.author.id, reason)
-    await ctx.send(f"{member.mention} has been banned. Reason: {reason}")
+    case_id = database.log_action("BAN", member.id, ctx.author.id, reason)
+    await ctx.send(f"{member.mention} has been banned. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(description="Unbans a user from the server using their ID.")
 @app_commands.describe(user_id="The ID of the user to unban", reason="Reason for the unban")
@@ -374,8 +374,8 @@ async def unban(ctx, user_id: str, *, reason: str = "No reason provided"):
         user_id_int = int(user_id)
         user = await bot.fetch_user(user_id_int)
         await ctx.guild.unban(user, reason=reason)
-        database.log_action("UNBAN", user_id_int, ctx.author.id, reason)
-        await ctx.send(f"{user.mention} has been unbanned. Reason: {reason}")
+        case_id = database.log_action("UNBAN", user_id_int, ctx.author.id, reason)
+        await ctx.send(f"{user.mention} has been unbanned. Reason: {reason} (Case #{case_id})")
     except ValueError:
         await ctx.send("Invalid User ID format.", ephemeral=True)
     except discord.NotFound:
@@ -448,13 +448,13 @@ async def modlogs(ctx, user_id: str):
 
         embed = discord.Embed(title=f"Mod Logs for {user_id}", color=discord.Color.red())
         # Discord embed fields have limits, so we slice if too many, or just show last 10
-        for action, staff_id, reason, timestamp, extra in logs[-10:]:
+        for case_id, action, staff_id, reason, timestamp, extra in logs[-10:]:
              staff_member = ctx.guild.get_member(staff_id)
              staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
              value_str = f"**Staff:** {staff_name}\n**Reason:** {reason}"
              if extra:
                  value_str += f"\n**Extra:** {extra}"
-             embed.add_field(name=f"{action} | {timestamp[:10]}", value=value_str, inline=False)
+             embed.add_field(name=f"Case #{case_id} | {action} | {timestamp[:10]}", value=value_str, inline=False)
 
         await ctx.send(embed=embed)
     except ValueError:
@@ -541,6 +541,32 @@ async def eight_ball(ctx, *, question: str):
         "Very doubtful."
     ]
     await ctx.send(f'Question: {question}\nAnswer: {random.choice(responses)}')
+
+@bot.hybrid_command(description="Shows details of a specific moderation case.")
+@app_commands.describe(case_id="ID of the case to look up")
+@commands.has_permissions(manage_messages=True)
+async def case(ctx, case_id: int):
+    log = database.get_case(case_id)
+    if not log:
+        await ctx.send(f"Case #{case_id} not found.")
+        return
+
+    # log structure: (id, action, user_id, staff_id, reason, timestamp, extra_data)
+    _, action, user_id, staff_id, reason, timestamp, extra_data = log
+
+    staff_member = ctx.guild.get_member(staff_id)
+    staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
+
+    embed = discord.Embed(title=f"Case #{case_id} | {action}", color=discord.Color.gold())
+    embed.add_field(name="User", value=f"<@{user_id}> ({user_id})", inline=True)
+    embed.add_field(name="Staff", value=f"{staff_name} ({staff_id})", inline=True)
+    embed.add_field(name="Timestamp", value=f"{timestamp[:19]}", inline=False)
+    embed.add_field(name="Reason", value=reason, inline=False)
+
+    if extra_data:
+        embed.add_field(name="Extra Data", value=extra_data, inline=False)
+
+    await ctx.send(embed=embed)
 
 if __name__ == '__main__':
     if TOKEN:
