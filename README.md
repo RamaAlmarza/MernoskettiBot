@@ -54,8 +54,7 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 *   `/modlogs <user_id>`: Shows logs for a user. Requires **Sr Mod** or higher.
 *   `/modstats <user_id>`: Shows stats of a moderator. Requires **Sr Admin** or higher.
 *   `/moderations`: Shows recent moderation actions. Requires **Sr Admin** or higher.
-*   `/case <case_id>`: Shows details of a case. Requires **Admin** or higher.
-*   `/case <case_id>`: Shows details of a specific moderation case.
+*   `/case <case_id>`: Shows details of a specific moderation case. Requires **Admin** or higher.
 
 ## Notes
 
