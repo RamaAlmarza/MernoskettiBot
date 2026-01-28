@@ -675,7 +675,7 @@ async def case(ctx, case_id: int):
 
 @bot.hybrid_command(description="Unmutes a member.")
 @app_commands.describe(member="The member to unmute")
-@has_permission('JR_MOD_ROLE_ID')
+@has_permission('LOW_STAFF_ROLE_ID')
 async def unmute(ctx, member: discord.Member):
     await member.timeout(None, reason="Unmuted by staff")
     case_id = database.log_action("UNMUTE", member.id, ctx.author.id, "Unmuted by staff")

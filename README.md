@@ -39,7 +39,7 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 ## Moderation
 
 *   `/mute <member> <duration> [reason]`: Mutes a member. Requires **Low Staff** or higher.
-*   `/unmute <member>`: Unmutes a member. Requires **Jr Mod** or higher.
+*   `/unmute <member>`: Unmutes a member. Requires **Low Staff** or higher.
 *   `/duration <member> <duration>`: Modifies the mute duration for a user. Requires **Low Staff** or higher.
 *   `/warn <member> [reason]`: Warns a member. Requires **Jr Mod** or higher.
 *   `/warn-remove <user_id> <warn_id>`: Removes a specific warning. Requires **Mod** or higher.
