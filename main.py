@@ -157,11 +157,11 @@ async def on_ready():
     bot.add_view(TicketControls())
 
     # Sync slash commands
-    try:
-        synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} command(s)")
-    except Exception as e:
-        print(f"Failed to sync commands: {e}")
+    # try:
+    #     synced = await bot.tree.sync()
+    #     print(f"Synced {len(synced)} command(s)")
+    # except Exception as e:
+    #     print(f"Failed to sync commands: {e}")
 
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
@@ -237,17 +237,36 @@ async def on_raw_reaction_add(payload):
         sent_message = await star_channel.send(content=f"⭐ {count} {channel.mention}", embed=embed)
         database.add_starboard_entry(message.id, sent_message.id, STAR_CHANNEL_ID, count)
 
-@bot.hybrid_command(description="Syncs commands to the current guild for instant updates.")
+@bot.hybrid_command(description="Syncs commands (default: local guild). Args: global, clear")
+@app_commands.describe(action="Action: 'global' (sync globally), 'clear' (clear guild), or leave empty (sync local)")
 @has_permission('ADMIN_ROLE_ID')
-async def sync(ctx):
-    """Syncs commands to the current guild for instant updates."""
-    try:
-        bot.tree.clear_commands(guild=ctx.guild)
-        bot.tree.copy_global_to(guild=ctx.guild)
-        synced = await bot.tree.sync(guild=ctx.guild)
-        await ctx.send(f"Synced {len(synced)} command(s) to this guild. (Duplicates cleared)")
-    except Exception as e:
-        await ctx.send(f"Failed to sync commands: {e}")
+async def sync(ctx, action: str = None):
+    """Syncs commands. Usage: !sync [global|clear]"""
+    if action == "global":
+        msg = await ctx.send("Syncing global commands... (This may take up to an hour to propagate)")
+        try:
+            synced = await bot.tree.sync()
+            await msg.edit(content=f"Synced {len(synced)} global command(s).")
+        except Exception as e:
+            await msg.edit(content=f"Failed to sync global commands: {e}")
+
+    elif action == "clear":
+        try:
+            bot.tree.clear_commands(guild=ctx.guild)
+            await bot.tree.sync(guild=ctx.guild)
+            await ctx.send("Cleared guild-specific commands. (Global commands may still persist)")
+        except Exception as e:
+            await ctx.send(f"Failed to clear commands: {e}")
+
+    else:
+        # Default: Sync to current guild (Instant update for dev)
+        try:
+            bot.tree.clear_commands(guild=ctx.guild)
+            bot.tree.copy_global_to(guild=ctx.guild)
+            synced = await bot.tree.sync(guild=ctx.guild)
+            await ctx.send(f"Synced {len(synced)} command(s) to this guild. (Duplicates cleared)")
+        except Exception as e:
+            await ctx.send(f"Failed to sync commands: {e}")
 
 @bot.hybrid_command(description="Changes the bot's prefix.")
 @app_commands.describe(new_prefix="The new prefix")
