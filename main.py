@@ -158,6 +158,23 @@ async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
 
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.MissingPermissions):
+        await interaction.response.send_message("You do not have the required permissions to run this command.", ephemeral=True)
+    elif isinstance(error, app_commands.BotMissingPermissions):
+        await interaction.response.send_message("I do not have the required permissions to execute this command.", ephemeral=True)
+    elif isinstance(error, app_commands.CheckFailure):
+        await interaction.response.send_message("You do not have permission to perform this action.", ephemeral=True)
+    elif isinstance(error, app_commands.TransformerError):
+        await interaction.response.send_message(f"Invalid input: {error}", ephemeral=True)
+    elif isinstance(error, app_commands.CommandOnCooldown):
+        await interaction.response.send_message(f"Command is on cooldown. Try again in {error.retry_after:.2f}s.", ephemeral=True)
+    else:
+        print(f"An error occurred: {error}")
+        if not interaction.response.is_done():
+            await interaction.response.send_message("An error occurred while executing the command.", ephemeral=True)
+
 @bot.event
 async def on_raw_reaction_add(payload):
     if str(payload.emoji) != '⭐':
