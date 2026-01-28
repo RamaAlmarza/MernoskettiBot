@@ -477,17 +477,18 @@ async def editnote(ctx, user_id: str, note_id: int, *, new_text: str):
     except ValueError:
         await ctx.send("Invalid User ID format.", ephemeral=True)
 
-@bot.hybrid_command(description="Bans a member from the server.")
-@app_commands.describe(reason="Reason for the ban")
+@bot.hybrid_command(description="Bans a user from the server (even if not in server).")
+@app_commands.describe(user="The user to ban", reason="Reason for the ban")
 @has_permission('MOD_ROLE_ID')
-async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
+async def ban(ctx, user: discord.User, *, reason: str = "No reason provided"):
     try:
-        case_id = database.log_action("BAN", member.id, ctx.author.id, reason)
-        await send_dm_log(member, "Banned", reason, case_id, ctx.guild.name)
-        await member.ban(reason=reason)
-        await ctx.send(f"{member.mention} has been banned. Reason: {reason} (Case #{case_id})")
+        case_id = database.log_action("BAN", user.id, ctx.author.id, reason)
+        # Try to send DM if user shares a server, otherwise pass
+        await send_dm_log(user, "Banned", reason, case_id, ctx.guild.name)
+        await ctx.guild.ban(user, reason=reason)
+        await ctx.send(f"{user.mention} has been banned. Reason: {reason} (Case #{case_id})")
     except discord.Forbidden:
-        await ctx.send("I do not have permission to perform this action on this user. They might have a higher role than me.", ephemeral=True)
+        await ctx.send("I do not have permission to ban this user.", ephemeral=True)
 
 @bot.hybrid_command(description="Unbans a user from the server using their ID.")
 @app_commands.describe(user_id="The ID of the user to unban", reason="Reason for the unban")
