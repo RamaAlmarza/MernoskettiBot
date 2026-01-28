@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Discord Bot</h1>
+        <p>A powerful moderation and utility bot for your server.</p>
+    </header>
+
+    <div class="button-container">
+        <!-- Replace '#' with your actual invite link -->
+        <a href="#" class="btn btn-primary">Add to Server</a>
+        <button id="toggle-commands-btn" class="btn btn-secondary" onclick="toggleCommands()">Commands</button>
+    </div>
+
+    <div id="commands-section">
+        <div class="command-category">
+            <h2>General</h2>
+            <ul class="command-list">
+                <li class="command-item">
+                    <span class="command-name">/ping</span>
+                    <span class="command-desc">Responds with "Pong!".</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/echo &lt;message&gt;</span>
+                    <span class="command-desc">Repeats the provided message.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/roll [sides]</span>
+                    <span class="command-desc">Rolls a dice with the specified number of sides (default 6).</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/8ball &lt;question&gt;</span>
+                    <span class="command-desc">Provides a magic 8-ball response.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/av &lt;user_id&gt;</span>
+                    <span class="command-desc">Displays a user's avatar.</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="command-category">
+            <h2>Ticket System</h2>
+            <ul class="command-list">
+                <li class="command-item">
+                    <span class="command-name">/setup_ticket</span>
+                    <span class="command-desc">Creates a panel with a dropdown menu to open support tickets.</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="command-category">
+            <h2>Moderation</h2>
+            <ul class="command-list">
+                <li class="command-item">
+                    <span class="command-name">/mute &lt;member&gt; &lt;duration&gt; [reason]</span>
+                    <span class="command-desc">Mutes a member for the specified duration.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/duration &lt;member&gt; &lt;duration&gt;</span>
+                    <span class="command-desc">Modifies the mute duration for a user.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/warn &lt;member&gt; [reason]</span>
+                    <span class="command-desc">Warns a member.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/warn-remove &lt;user_id&gt; &lt;warn_id&gt;</span>
+                    <span class="command-desc">Removes a specific warning.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/warnings &lt;member&gt;</span>
+                    <span class="command-desc">Lists warnings for a specific member.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/ban &lt;member&gt; [reason]</span>
+                    <span class="command-desc">Bans a member from the server.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/unban &lt;user_id&gt; [reason]</span>
+                    <span class="command-desc">Unbans a user from the server using their ID.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/kick &lt;member&gt; [reason]</span>
+                    <span class="command-desc">Kicks a member from the server.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/softban &lt;member&gt; [reason]</span>
+                    <span class="command-desc">Bans and instantly unbans a user to delete their messages.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/lock</span>
+                    <span class="command-desc">Locks the current channel.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/unlock</span>
+                    <span class="command-desc">Unlocks the current channel.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/temprole &lt;member&gt; &lt;role&gt; &lt;duration&gt;</span>
+                    <span class="command-desc">Gives a temporary role to a user.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/modlogs &lt;user_id&gt;</span>
+                    <span class="command-desc">Shows all interactions with a user.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/modstats &lt;user_id&gt;</span>
+                    <span class="command-desc">Shows statistics of a moderator's actions.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/moderations</span>
+                    <span class="command-desc">Shows the last 50 moderation actions.</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="command-category">
+            <h2>Notes</h2>
+            <ul class="command-list">
+                <li class="command-item">
+                    <span class="command-name">/note &lt;user_id&gt; &lt;text&gt;</span>
+                    <span class="command-desc">Adds a note to a user.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/delnote &lt;user_id&gt; &lt;note_id&gt;</span>
+                    <span class="command-desc">Deletes a specific note.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/notes &lt;user_id&gt;</span>
+                    <span class="command-desc">Shows all notes for a user.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/clearnotes &lt;user_id&gt;</span>
+                    <span class="command-desc">Clears all notes for a user.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/editnote &lt;user_id&gt; &lt;note_id&gt; &lt;new_text&gt;</span>
+                    <span class="command-desc">Edits a note.</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="command-category">
+            <h2>Utilities</h2>
+            <ul class="command-list">
+                <li class="command-item">
+                    <span class="command-name">/star &lt;message_id&gt;</span>
+                    <span class="command-desc">Sends a message to the starred channel.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">!sync</span>
+                    <span class="command-desc">Syncs slash commands (Owner only).</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
