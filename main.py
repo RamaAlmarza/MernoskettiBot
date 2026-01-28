@@ -270,10 +270,13 @@ async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "No 
         await ctx.send("Invalid duration format. Use s, m, h, or d (e.g., 10m).", ephemeral=True)
         return
 
-    case_id = database.log_action("MUTE", member.id, ctx.author.id, reason, duration)
-    await send_dm_log(member, "Muted", reason, case_id, ctx.guild.name)
-    await member.timeout(delta, reason=reason)
-    await ctx.send(f"{member.mention} has been muted for {duration}. Reason: {reason} (Case #{case_id})")
+    try:
+        case_id = database.log_action("MUTE", member.id, ctx.author.id, reason, duration)
+        await send_dm_log(member, "Muted", reason, case_id, ctx.guild.name)
+        await member.timeout(delta, reason=reason)
+        await ctx.send(f"{member.mention} has been muted for {duration}. Reason: {reason} (Case #{case_id})")
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to perform this action on this user. They might have a higher role than me.", ephemeral=True)
 
 @bot.hybrid_command(description="Modifies the mute duration for a user.")
 @app_commands.describe(member="The member to modify", duration="New duration (e.g., 10m, 1h)")
@@ -284,28 +287,37 @@ async def duration(ctx, member: discord.Member, duration: str):
         await ctx.send("Invalid duration format. Use s, m, h, or d (e.g., 10m).", ephemeral=True)
         return
 
-    await member.timeout(delta, reason="Duration modified by staff")
-    case_id = database.log_action("MUTE_DURATION_EDIT", member.id, ctx.author.id, "Modified duration", duration)
-    await ctx.send(f"Updated mute duration for {member.mention} to {duration}. (Case #{case_id})")
+    try:
+        await member.timeout(delta, reason="Duration modified by staff")
+        case_id = database.log_action("MUTE_DURATION_EDIT", member.id, ctx.author.id, "Modified duration", duration)
+        await ctx.send(f"Updated mute duration for {member.mention} to {duration}. (Case #{case_id})")
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to perform this action on this user. They might have a higher role than me.", ephemeral=True)
 
 @bot.hybrid_command(description="Kicks a member from the server.")
 @app_commands.describe(reason="Reason for the kick")
 @has_permission('MOD_ROLE_ID')
 async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided"):
-    case_id = database.log_action("KICK", member.id, ctx.author.id, reason)
-    await send_dm_log(member, "Kicked", reason, case_id, ctx.guild.name)
-    await member.kick(reason=reason)
-    await ctx.send(f"{member.mention} has been kicked. Reason: {reason} (Case #{case_id})")
+    try:
+        case_id = database.log_action("KICK", member.id, ctx.author.id, reason)
+        await send_dm_log(member, "Kicked", reason, case_id, ctx.guild.name)
+        await member.kick(reason=reason)
+        await ctx.send(f"{member.mention} has been kicked. Reason: {reason} (Case #{case_id})")
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to perform this action on this user. They might have a higher role than me.", ephemeral=True)
 
 @bot.hybrid_command(description="Softbans a member (ban then unban) to delete messages.")
 @app_commands.describe(reason="Reason for the softban")
 @has_permission('SR_ADMIN_ROLE_ID')
 async def softban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
-    case_id = database.log_action("SOFTBAN", member.id, ctx.author.id, reason)
-    await send_dm_log(member, "Softbanned", reason, case_id, ctx.guild.name)
-    await member.ban(reason=reason, delete_message_seconds=86400)
-    await member.unban(reason="Softban unban")
-    await ctx.send(f"{member.mention} has been softbanned. (Case #{case_id})")
+    try:
+        case_id = database.log_action("SOFTBAN", member.id, ctx.author.id, reason)
+        await send_dm_log(member, "Softbanned", reason, case_id, ctx.guild.name)
+        await member.ban(reason=reason, delete_message_seconds=86400)
+        await member.unban(reason="Softban unban")
+        await ctx.send(f"{member.mention} has been softbanned. (Case #{case_id})")
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to perform this action on this user. They might have a higher role than me.", ephemeral=True)
 
 @bot.hybrid_command(description="Locks the current channel.")
 @has_permission('ADMIN_ROLE_ID')
@@ -330,17 +342,20 @@ async def temprole(ctx, member: discord.Member, role: discord.Role, duration: st
         await ctx.send("Invalid duration format.", ephemeral=True)
         return
 
-    await member.add_roles(role)
-    database.log_action("TEMPROLE_ADD", member.id, ctx.author.id, f"Added role {role.name}", duration)
-    await ctx.send(f"Gave {role.name} to {member.mention} for {duration}.")
+    try:
+        await member.add_roles(role)
+        database.log_action("TEMPROLE_ADD", member.id, ctx.author.id, f"Added role {role.name}", duration)
+        await ctx.send(f"Gave {role.name} to {member.mention} for {duration}.")
 
-    # Non-persistent implementation for simplicity as requested plan
-    await asyncio.sleep(delta.total_seconds())
+        # Non-persistent implementation for simplicity as requested plan
+        await asyncio.sleep(delta.total_seconds())
 
-    # Check if user still has role and remove it
-    if role in member.roles:
-        await member.remove_roles(role)
-        database.log_action("TEMPROLE_REMOVE", member.id, bot.user.id, f"Removed role {role.name} (Expired)")
+        # Check if user still has role and remove it
+        if role in member.roles:
+            await member.remove_roles(role)
+            database.log_action("TEMPROLE_REMOVE", member.id, bot.user.id, f"Removed role {role.name} (Expired)")
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to perform this action on this user or role. I might be missing permissions or the role is higher than mine.", ephemeral=True)
 
 @bot.hybrid_command(description="Warns a member.")
 @app_commands.describe(reason="Reason for the warning")
@@ -466,10 +481,13 @@ async def editnote(ctx, user_id: str, note_id: int, *, new_text: str):
 @app_commands.describe(reason="Reason for the ban")
 @has_permission('MOD_ROLE_ID')
 async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
-    case_id = database.log_action("BAN", member.id, ctx.author.id, reason)
-    await send_dm_log(member, "Banned", reason, case_id, ctx.guild.name)
-    await member.ban(reason=reason)
-    await ctx.send(f"{member.mention} has been banned. Reason: {reason} (Case #{case_id})")
+    try:
+        case_id = database.log_action("BAN", member.id, ctx.author.id, reason)
+        await send_dm_log(member, "Banned", reason, case_id, ctx.guild.name)
+        await member.ban(reason=reason)
+        await ctx.send(f"{member.mention} has been banned. Reason: {reason} (Case #{case_id})")
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to perform this action on this user. They might have a higher role than me.", ephemeral=True)
 
 @bot.hybrid_command(description="Unbans a user from the server using their ID.")
 @app_commands.describe(user_id="The ID of the user to unban", reason="Reason for the unban")
@@ -485,6 +503,8 @@ async def unban(ctx, user_id: str, *, reason: str = "No reason provided"):
         await ctx.send("Invalid User ID format.", ephemeral=True)
     except discord.NotFound:
         await ctx.send("User not found.", ephemeral=True)
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to unban users.", ephemeral=True)
     except discord.HTTPException:
         await ctx.send("Failed to unban user.", ephemeral=True)
 
@@ -677,9 +697,12 @@ async def case(ctx, case_id: int):
 @app_commands.describe(member="The member to unmute")
 @has_permission('LOW_STAFF_ROLE_ID')
 async def unmute(ctx, member: discord.Member):
-    await member.timeout(None, reason="Unmuted by staff")
-    case_id = database.log_action("UNMUTE", member.id, ctx.author.id, "Unmuted by staff")
-    await ctx.send(f"{member.mention} has been unmuted. (Case #{case_id})")
+    try:
+        await member.timeout(None, reason="Unmuted by staff")
+        case_id = database.log_action("UNMUTE", member.id, ctx.author.id, "Unmuted by staff")
+        await ctx.send(f"{member.mention} has been unmuted. (Case #{case_id})")
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to perform this action on this user. They might have a higher role than me.", ephemeral=True)
 
 if __name__ == '__main__':
     if TOKEN:
