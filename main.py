@@ -381,6 +381,7 @@ async def on_raw_reaction_remove(payload):
 async def sync(ctx):
     """Syncs commands to the current guild for instant updates."""
     try:
+        bot.tree.copy_global_to(guild=ctx.guild)
         synced = await bot.tree.sync(guild=ctx.guild)
         await ctx.send(f"Synced {len(synced)} command(s) to this guild.")
     except Exception as e:
