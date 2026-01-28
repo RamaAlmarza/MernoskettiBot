@@ -38,6 +38,7 @@ async def test_moderation_commands_exist():
     assert bot.get_command('lock') is not None
     assert bot.get_command('unlock') is not None
     assert bot.get_command('temprole') is not None
+    assert bot.get_command('unmute') is not None
 
 @pytest.mark.asyncio
 async def test_note_commands_exist():

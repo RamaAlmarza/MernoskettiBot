@@ -21,6 +21,43 @@ ADMIN_ROLE_ID = int(os.getenv('ADMIN_ROLE_ID', 0))
 SR_ADMIN_ROLE_ID = int(os.getenv('SR_ADMIN_ROLE_ID', 0))
 STAR_THRESHOLD = int(os.getenv('STAR_THRESHOLD', 5))
 
+def has_permission(min_role_name):
+    async def predicate(ctx):
+        # Define hierarchy
+        hierarchy = [
+            'LOW_STAFF_ROLE_ID',
+            'JR_MOD_ROLE_ID',
+            'MOD_ROLE_ID',
+            'SR_MOD_ROLE_ID',
+            'ADMIN_ROLE_ID',
+            'SR_ADMIN_ROLE_ID'
+        ]
+
+        try:
+            min_index = hierarchy.index(min_role_name)
+        except ValueError:
+            return False # Invalid role name passed
+
+        # Get all allowed role variable names
+        allowed_vars = hierarchy[min_index:]
+
+        # Get actual IDs from global scope
+        allowed_ids = []
+        for var_name in allowed_vars:
+            val = globals().get(var_name, 0)
+            if val != 0:
+                allowed_ids.append(val)
+
+        if not allowed_ids:
+            return False # No roles configured
+
+        # Check if user has any of the allowed IDs
+        if isinstance(ctx.author, discord.Member):
+            user_role_ids = [r.id for r in ctx.author.roles]
+            return any(role_id in user_role_ids for role_id in allowed_ids)
+        return False
+    return commands.check(predicate)
+
 # Set up intents
 intents = discord.Intents.default()
 intents.message_content = True
@@ -186,6 +223,7 @@ async def sync(ctx):
         await ctx.send(f"Failed to sync commands: {e}")
 
 @bot.hybrid_command(description="Sets up the ticket system panel.")
+@has_permission('SR_ADMIN_ROLE_ID')
 async def setup_ticket(ctx):
     """Sets up the ticket system panel."""
     embed = discord.Embed(
@@ -225,7 +263,7 @@ async def send_dm_log(member: discord.Member, action: str, reason: str, case_id:
 
 @bot.hybrid_command(description="Mutes a member for the specified duration.")
 @app_commands.describe(duration="Duration (e.g., 10m, 1h)", reason="Reason for the mute")
-@commands.has_permissions(moderate_members=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "No reason provided"):
     delta = convert_duration(duration)
     if not delta:
@@ -239,7 +277,7 @@ async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "No 
 
 @bot.hybrid_command(description="Modifies the mute duration for a user.")
 @app_commands.describe(member="The member to modify", duration="New duration (e.g., 10m, 1h)")
-@commands.has_permissions(moderate_members=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def duration(ctx, member: discord.Member, duration: str):
     delta = convert_duration(duration)
     if not delta:
@@ -252,7 +290,7 @@ async def duration(ctx, member: discord.Member, duration: str):
 
 @bot.hybrid_command(description="Kicks a member from the server.")
 @app_commands.describe(reason="Reason for the kick")
-@commands.has_permissions(kick_members=True)
+@has_permission('MOD_ROLE_ID')
 async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     case_id = database.log_action("KICK", member.id, ctx.author.id, reason)
     await send_dm_log(member, "Kicked", reason, case_id, ctx.guild.name)
@@ -261,7 +299,7 @@ async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided
 
 @bot.hybrid_command(description="Softbans a member (ban then unban) to delete messages.")
 @app_commands.describe(reason="Reason for the softban")
-@commands.has_permissions(ban_members=True)
+@has_permission('SR_ADMIN_ROLE_ID')
 async def softban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     case_id = database.log_action("SOFTBAN", member.id, ctx.author.id, reason)
     await send_dm_log(member, "Softbanned", reason, case_id, ctx.guild.name)
@@ -270,14 +308,14 @@ async def softban(ctx, member: discord.Member, *, reason: str = "No reason provi
     await ctx.send(f"{member.mention} has been softbanned. (Case #{case_id})")
 
 @bot.hybrid_command(description="Locks the current channel.")
-@commands.has_permissions(manage_channels=True)
+@has_permission('ADMIN_ROLE_ID')
 async def lock(ctx):
     await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
     database.log_action("LOCK", 0, ctx.author.id, "Channel locked", str(ctx.channel.id))
     await ctx.send(f"Channel {ctx.channel.mention} has been locked.")
 
 @bot.hybrid_command(description="Unlocks the current channel.")
-@commands.has_permissions(manage_channels=True)
+@has_permission('ADMIN_ROLE_ID')
 async def unlock(ctx):
     await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
     database.log_action("UNLOCK", 0, ctx.author.id, "Channel unlocked", str(ctx.channel.id))
@@ -285,7 +323,7 @@ async def unlock(ctx):
 
 @bot.hybrid_command(description="Gives a temporary role to a user.")
 @app_commands.describe(member="The member", role="The role to give", duration="Duration (e.g. 10m)")
-@commands.has_permissions(manage_roles=True)
+@has_permission('ADMIN_ROLE_ID')
 async def temprole(ctx, member: discord.Member, role: discord.Role, duration: str):
     delta = convert_duration(duration)
     if not delta:
@@ -306,7 +344,7 @@ async def temprole(ctx, member: discord.Member, role: discord.Role, duration: st
 
 @bot.hybrid_command(description="Warns a member.")
 @app_commands.describe(reason="Reason for the warning")
-@commands.has_permissions(manage_messages=True)
+@has_permission('JR_MOD_ROLE_ID')
 async def warn(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     database.add_warning(member.id, reason, ctx.author.id)
     case_id = database.log_action("WARN", member.id, ctx.author.id, reason)
@@ -315,7 +353,7 @@ async def warn(ctx, member: discord.Member, *, reason: str = "No reason provided
 
 @bot.hybrid_command(name="warn-remove", description="Removes a specific warning.")
 @app_commands.describe(user_id="ID of the user", warn_id="ID of the warning to remove")
-@commands.has_permissions(manage_messages=True)
+@has_permission('MOD_ROLE_ID')
 async def warn_remove(ctx, user_id: str, warn_id: int):
     try:
         user_id_int = int(user_id)
@@ -328,7 +366,7 @@ async def warn_remove(ctx, user_id: str, warn_id: int):
         await ctx.send("Invalid User ID format.", ephemeral=True)
 
 @bot.hybrid_command(description="Lists warnings for a specific member.")
-@commands.has_permissions(manage_messages=True)
+@has_permission('JR_MOD_ROLE_ID')
 async def warnings(ctx, member: discord.Member):
     warnings_list = database.get_warnings(member.id)
     if not warnings_list:
@@ -350,7 +388,7 @@ async def warnings(ctx, member: discord.Member):
 
 @bot.hybrid_command(description="Adds a note to a user.")
 @app_commands.describe(user_id="ID of the user", text="The note content")
-@commands.has_permissions(manage_messages=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def note(ctx, user_id: str, *, text: str):
     try:
         user_id_int = int(user_id)
@@ -362,7 +400,7 @@ async def note(ctx, user_id: str, *, text: str):
 
 @bot.hybrid_command(description="Deletes a specific note.")
 @app_commands.describe(user_id="ID of the user", note_id="ID of the note to delete")
-@commands.has_permissions(manage_messages=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def delnote(ctx, user_id: str, note_id: int):
     try:
         user_id_int = int(user_id)
@@ -376,7 +414,7 @@ async def delnote(ctx, user_id: str, note_id: int):
 
 @bot.hybrid_command(description="Shows all notes for a user.")
 @app_commands.describe(user_id="ID of the user")
-@commands.has_permissions(manage_messages=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def notes(ctx, user_id: str):
     try:
         user_id_int = int(user_id)
@@ -400,7 +438,7 @@ async def notes(ctx, user_id: str):
 
 @bot.hybrid_command(description="Clears all notes for a user.")
 @app_commands.describe(user_id="ID of the user")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_MOD_ROLE_ID')
 async def clearnotes(ctx, user_id: str):
     try:
         user_id_int = int(user_id)
@@ -412,7 +450,7 @@ async def clearnotes(ctx, user_id: str):
 
 @bot.hybrid_command(description="Edits a note.")
 @app_commands.describe(user_id="ID of the user", note_id="ID of the note", new_text="New note content")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_MOD_ROLE_ID')
 async def editnote(ctx, user_id: str, note_id: int, *, new_text: str):
     try:
         user_id_int = int(user_id)
@@ -426,7 +464,7 @@ async def editnote(ctx, user_id: str, note_id: int, *, new_text: str):
 
 @bot.hybrid_command(description="Bans a member from the server.")
 @app_commands.describe(reason="Reason for the ban")
-@commands.has_permissions(ban_members=True)
+@has_permission('MOD_ROLE_ID')
 async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     case_id = database.log_action("BAN", member.id, ctx.author.id, reason)
     await send_dm_log(member, "Banned", reason, case_id, ctx.guild.name)
@@ -435,7 +473,7 @@ async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"
 
 @bot.hybrid_command(description="Unbans a user from the server using their ID.")
 @app_commands.describe(user_id="The ID of the user to unban", reason="Reason for the unban")
-@commands.has_permissions(ban_members=True)
+@has_permission('MOD_ROLE_ID')
 async def unban(ctx, user_id: str, *, reason: str = "No reason provided"):
     try:
         user_id_int = int(user_id)
@@ -452,7 +490,7 @@ async def unban(ctx, user_id: str, *, reason: str = "No reason provided"):
 
 @bot.hybrid_command(description="Star a message (send content/embed to a channel).")
 @app_commands.describe(message_id="ID of the message to star")
-@commands.has_permissions(manage_messages=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def star(ctx, message_id: str):
     # Retrieve target channel from env or config. Using placeholder for now as requested.
     STAR_CHANNEL_ID = int(os.getenv('STAR_CHANNEL_ID', 0))
@@ -503,7 +541,7 @@ async def av(ctx, user_id: str):
 
 @bot.hybrid_command(description="Shows moderation logs (warns, mutes) for a user.")
 @app_commands.describe(user_id="ID of the user")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_MOD_ROLE_ID')
 async def modlogs(ctx, user_id: str):
     try:
         user_id_int = int(user_id)
@@ -529,7 +567,7 @@ async def modlogs(ctx, user_id: str):
 
 @bot.hybrid_command(description="Shows stats for a moderator.")
 @app_commands.describe(user_id="ID of the moderator")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_ADMIN_ROLE_ID')
 async def modstats(ctx, user_id: str):
     try:
         user_id_int = int(user_id)
@@ -548,7 +586,7 @@ async def modstats(ctx, user_id: str):
         await ctx.send("Invalid User ID format.", ephemeral=True)
 
 @bot.hybrid_command(description="Shows recent moderation actions.")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_ADMIN_ROLE_ID')
 async def moderations(ctx):
     logs = database.get_recent_moderations(limit=10) # Showing 10 to fit in one embed easily
 
@@ -611,7 +649,7 @@ async def eight_ball(ctx, *, question: str):
 
 @bot.hybrid_command(description="Shows details of a specific moderation case.")
 @app_commands.describe(case_id="ID of the case to look up")
-@commands.has_permissions(manage_messages=True)
+@has_permission('ADMIN_ROLE_ID')
 async def case(ctx, case_id: int):
     log = database.get_case(case_id)
     if not log:
@@ -634,6 +672,14 @@ async def case(ctx, case_id: int):
         embed.add_field(name="Extra Data", value=extra_data, inline=False)
 
     await ctx.send(embed=embed)
+
+@bot.hybrid_command(description="Unmutes a member.")
+@app_commands.describe(member="The member to unmute")
+@has_permission('JR_MOD_ROLE_ID')
+async def unmute(ctx, member: discord.Member):
+    await member.timeout(None, reason="Unmuted by staff")
+    case_id = database.log_action("UNMUTE", member.id, ctx.author.id, "Unmuted by staff")
+    await ctx.send(f"{member.mention} has been unmuted. (Case #{case_id})")
 
 if __name__ == '__main__':
     if TOKEN:
