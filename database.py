@@ -42,6 +42,16 @@ def init_db():
         )
     """)
 
+    # Starboard table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS starboard (
+            message_id INTEGER PRIMARY KEY,
+            star_message_id INTEGER NOT NULL,
+            channel_id INTEGER NOT NULL,
+            count INTEGER NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -144,18 +154,30 @@ def log_action(action, user_id, staff_id, reason, extra_data=None):
         INSERT INTO moderation_logs (action, user_id, staff_id, reason, timestamp, extra_data)
         VALUES (?, ?, ?, ?, ?, ?)
     """, (action, user_id, staff_id, reason, timestamp, extra_data))
+    case_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    return case_id
 
 def get_mod_logs(user_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT action, staff_id, reason, timestamp, extra_data FROM moderation_logs WHERE user_id = ?
+        SELECT id, action, staff_id, reason, timestamp, extra_data FROM moderation_logs WHERE user_id = ?
     """, (user_id,))
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def get_case(case_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, action, user_id, staff_id, reason, timestamp, extra_data FROM moderation_logs WHERE id = ?
+    """, (case_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
 
 def get_mod_stats(staff_id):
     conn = sqlite3.connect(DB_NAME)
@@ -176,6 +198,31 @@ def get_recent_moderations(limit=50):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+# --- Starboard ---
+
+def get_starboard_entry(message_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT star_message_id, channel_id, count FROM starboard WHERE message_id = ?", (message_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def add_starboard_entry(message_id, star_message_id, channel_id, count):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO starboard (message_id, star_message_id, channel_id, count) VALUES (?, ?, ?, ?)",
+                   (message_id, star_message_id, channel_id, count))
+    conn.commit()
+    conn.close()
+
+def update_starboard_entry(message_id, count):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE starboard SET count = ? WHERE message_id = ?", (count, message_id))
+    conn.commit()
+    conn.close()
 
 # Initialize DB on module load (or call it explicitly in main)
 init_db()

@@ -13,7 +13,8 @@ This is a basic Discord bot template written in Python using `discord.py`.
     *   Copy `.env.example` to `.env`.
     *   Replace `your_token_here` with your actual Discord bot token.
     *   Set the Role IDs for permissions (Low Staff, Jr Mod, Mod, Sr Mod, Admin, Sr Admin).
-    *   Set `STAR_CHANNEL_ID` for the `/star` command.
+    *   Set `STAR_CHANNEL_ID` for the `/star` command and automatic Starboard.
+    *   Set `STAR_THRESHOLD` (default 5) for the automatic Starboard.
 
     ```bash
     cp .env.example .env
@@ -37,21 +38,23 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 
 ## Moderation
 
-*   `/mute <member> <duration> [reason]`: Mutes a member for the specified duration (e.g., 10m, 1h). Requires `moderate_members` permission.
-*   `/duration <member> <duration>`: Modifies the mute duration for a user.
-*   `/warn <member> [reason]`: Warns a member and logs it to the database. Requires `manage_messages` permission.
-*   `/warn-remove <user_id> <warn_id>`: Removes a specific warning.
-*   `/warnings <member>`: Lists warnings for a specific member. Requires `manage_messages` permission.
-*   `/ban <member> [reason]`: Bans a member from the server. Requires `ban_members` permission.
-*   `/unban <user_id> [reason]`: Unbans a user from the server using their ID. Requires `ban_members` permission.
-*   `/kick <member> [reason]`: Kicks a member from the server.
-*   `/softban <member> [reason]`: Bans and instantly unbans a user to delete their messages.
-*   `/lock`: Locks the current channel (denies send messages).
-*   `/unlock`: Unlocks the current channel.
-*   `/temprole <member> <role> <duration>`: Gives a temporary role to a user.
-*   `/modlogs <user_id>`: Shows all interactions (warns, mutes) with a user.
-*   `/modstats <user_id>`: Shows statistics of a moderator's actions.
-*   `/moderations`: Shows the last 50 moderation actions.
+*   `/mute <member> <duration> [reason]`: Mutes a member. Requires **Low Staff** or higher.
+*   `/unmute <member>`: Unmutes a member. Requires **Low Staff** or higher.
+*   `/duration <member> <duration>`: Modifies the mute duration for a user. Requires **Low Staff** or higher.
+*   `/warn <member> [reason]`: Warns a member. Requires **Jr Mod** or higher.
+*   `/warn-remove <user_id> <warn_id>`: Removes a specific warning. Requires **Mod** or higher.
+*   `/warnings <member>`: Lists warnings for a specific member. Requires **Jr Mod** or higher.
+*   `/ban <member> [reason]`: Bans a member. Requires **Mod** or higher.
+*   `/unban <user_id> [reason]`: Unbans a user. Requires **Mod** or higher.
+*   `/kick <member> [reason]`: Kicks a member. Requires **Mod** or higher.
+*   `/softban <member> [reason]`: Softbans a user. Requires **Sr Admin** or higher.
+*   `/lock`: Locks the current channel. Requires **Admin** or higher.
+*   `/unlock`: Unlocks the current channel. Requires **Admin** or higher.
+*   `/temprole <member> <role> <duration>`: Gives a temporary role. Requires **Admin** or higher.
+*   `/modlogs <user_id>`: Shows logs for a user. Requires **Sr Mod** or higher.
+*   `/modstats <user_id>`: Shows stats of a moderator. Requires **Sr Admin** or higher.
+*   `/moderations`: Shows recent moderation actions. Requires **Sr Admin** or higher.
+*   `/case <case_id>`: Shows details of a specific moderation case. Requires **Admin** or higher.
 
 ## Notes
 
@@ -65,6 +68,10 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 
 *   `/star <message_id>`: Sends a message to the starred channel.
 *   `/av <user_id>`: Displays a user's avatar.
+
+### Automatic Starboard
+
+Messages that receive 5 (or configured `STAR_THRESHOLD`) ⭐ reactions are automatically posted to the configured `STAR_CHANNEL_ID` as an embed. If more stars are added, the count updates automatically.
 
 ## Utilities
 

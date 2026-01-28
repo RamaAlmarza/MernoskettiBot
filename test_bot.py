@@ -2,6 +2,7 @@ import pytest
 import discord
 from discord.ext import commands
 from main import bot
+import database
 
 @pytest.mark.asyncio
 async def test_ping_command_exists():
@@ -37,6 +38,7 @@ async def test_moderation_commands_exist():
     assert bot.get_command('lock') is not None
     assert bot.get_command('unlock') is not None
     assert bot.get_command('temprole') is not None
+    assert bot.get_command('unmute') is not None
 
 @pytest.mark.asyncio
 async def test_note_commands_exist():
@@ -53,7 +55,14 @@ async def test_utility_commands_exist():
     assert bot.get_command('modlogs') is not None
     assert bot.get_command('modstats') is not None
     assert bot.get_command('moderations') is not None
+    assert bot.get_command('case') is not None
 
 @pytest.mark.asyncio
 async def test_sync_command_exists():
     assert bot.get_command('sync') is not None
+
+@pytest.mark.asyncio
+async def test_starboard_functions_exist():
+    assert hasattr(database, 'get_starboard_entry')
+    assert hasattr(database, 'add_starboard_entry')
+    assert hasattr(database, 'update_starboard_entry')

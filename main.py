@@ -19,6 +19,44 @@ MOD_ROLE_ID = int(os.getenv('MOD_ROLE_ID', 0))
 SR_MOD_ROLE_ID = int(os.getenv('SR_MOD_ROLE_ID', 0))
 ADMIN_ROLE_ID = int(os.getenv('ADMIN_ROLE_ID', 0))
 SR_ADMIN_ROLE_ID = int(os.getenv('SR_ADMIN_ROLE_ID', 0))
+STAR_THRESHOLD = int(os.getenv('STAR_THRESHOLD', 5))
+
+def has_permission(min_role_name):
+    async def predicate(ctx):
+        # Define hierarchy
+        hierarchy = [
+            'LOW_STAFF_ROLE_ID',
+            'JR_MOD_ROLE_ID',
+            'MOD_ROLE_ID',
+            'SR_MOD_ROLE_ID',
+            'ADMIN_ROLE_ID',
+            'SR_ADMIN_ROLE_ID'
+        ]
+
+        try:
+            min_index = hierarchy.index(min_role_name)
+        except ValueError:
+            return False # Invalid role name passed
+
+        # Get all allowed role variable names
+        allowed_vars = hierarchy[min_index:]
+
+        # Get actual IDs from global scope
+        allowed_ids = []
+        for var_name in allowed_vars:
+            val = globals().get(var_name, 0)
+            if val != 0:
+                allowed_ids.append(val)
+
+        if not allowed_ids:
+            return False # No roles configured
+
+        # Check if user has any of the allowed IDs
+        if isinstance(ctx.author, discord.Member):
+            user_role_ids = [r.id for r in ctx.author.roles]
+            return any(role_id in user_role_ids for role_id in allowed_ids)
+        return False
+    return commands.check(predicate)
 
 # Set up intents
 intents = discord.Intents.default()
@@ -120,6 +158,60 @@ async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
 
+@bot.event
+async def on_raw_reaction_add(payload):
+    if str(payload.emoji) != '⭐':
+        return
+
+    STAR_CHANNEL_ID = int(os.getenv('STAR_CHANNEL_ID', 0))
+    if not STAR_CHANNEL_ID:
+        return
+
+    channel = bot.get_channel(payload.channel_id)
+    if not channel:
+        return
+
+    try:
+        message = await channel.fetch_message(payload.message_id)
+    except discord.NotFound:
+        return
+
+    # Count star reactions
+    reaction = discord.utils.get(message.reactions, emoji='⭐')
+    if not reaction:
+        return
+
+    count = reaction.count
+
+    # Check DB
+    entry = database.get_starboard_entry(message.id)
+
+    if entry:
+        star_message_id, _, _ = entry
+        star_channel = bot.get_channel(STAR_CHANNEL_ID)
+        if star_channel:
+            try:
+                star_message = await star_channel.fetch_message(star_message_id)
+                await star_message.edit(content=f"⭐ {count} {channel.mention}")
+                database.update_starboard_entry(message.id, count)
+            except discord.NotFound:
+                pass # Star message deleted manually?
+    elif count >= STAR_THRESHOLD:
+        star_channel = bot.get_channel(STAR_CHANNEL_ID)
+        if not star_channel:
+            return
+
+        embed = discord.Embed(description=message.content, color=discord.Color.gold())
+        embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
+        embed.add_field(name="Source", value=f"[Jump!]({message.jump_url})")
+        embed.set_footer(text=f"{message.id} • {message.created_at.strftime('%Y-%m-%d %H:%M')}")
+
+        if message.attachments:
+            embed.set_image(url=message.attachments[0].url)
+
+        sent_message = await star_channel.send(content=f"⭐ {count} {channel.mention}", embed=embed)
+        database.add_starboard_entry(message.id, sent_message.id, STAR_CHANNEL_ID, count)
+
 @bot.command()
 @commands.is_owner()
 async def sync(ctx):
@@ -131,6 +223,7 @@ async def sync(ctx):
         await ctx.send(f"Failed to sync commands: {e}")
 
 @bot.hybrid_command(description="Sets up the ticket system panel.")
+@has_permission('SR_ADMIN_ROLE_ID')
 async def setup_ticket(ctx):
     """Sets up the ticket system panel."""
     embed = discord.Embed(
@@ -157,22 +250,34 @@ def convert_duration(duration: str):
         return None
     return None
 
+async def send_dm_log(member: discord.Member, action: str, reason: str, case_id: int, guild_name: str):
+    """Helper to send DM logs to users."""
+    try:
+        embed = discord.Embed(title=f"You have been {action}", color=discord.Color.red())
+        embed.add_field(name="Server", value=guild_name, inline=False)
+        embed.add_field(name="Reason", value=reason, inline=False)
+        embed.add_field(name="Case ID", value=f"#{case_id}", inline=False)
+        await member.send(embed=embed)
+    except (discord.Forbidden, discord.HTTPException):
+        pass  # User has DMs off or blocked the bot
+
 @bot.hybrid_command(description="Mutes a member for the specified duration.")
 @app_commands.describe(duration="Duration (e.g., 10m, 1h)", reason="Reason for the mute")
-@commands.has_permissions(moderate_members=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def mute(ctx, member: discord.Member, duration: str, *, reason: str = "No reason provided"):
     delta = convert_duration(duration)
     if not delta:
         await ctx.send("Invalid duration format. Use s, m, h, or d (e.g., 10m).", ephemeral=True)
         return
 
+    case_id = database.log_action("MUTE", member.id, ctx.author.id, reason, duration)
+    await send_dm_log(member, "Muted", reason, case_id, ctx.guild.name)
     await member.timeout(delta, reason=reason)
-    database.log_action("MUTE", member.id, ctx.author.id, reason, duration)
-    await ctx.send(f"{member.mention} has been muted for {duration}. Reason: {reason}")
+    await ctx.send(f"{member.mention} has been muted for {duration}. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(description="Modifies the mute duration for a user.")
 @app_commands.describe(member="The member to modify", duration="New duration (e.g., 10m, 1h)")
-@commands.has_permissions(moderate_members=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def duration(ctx, member: discord.Member, duration: str):
     delta = convert_duration(duration)
     if not delta:
@@ -180,35 +285,37 @@ async def duration(ctx, member: discord.Member, duration: str):
         return
 
     await member.timeout(delta, reason="Duration modified by staff")
-    database.log_action("MUTE_DURATION_EDIT", member.id, ctx.author.id, "Modified duration", duration)
-    await ctx.send(f"Updated mute duration for {member.mention} to {duration}.")
+    case_id = database.log_action("MUTE_DURATION_EDIT", member.id, ctx.author.id, "Modified duration", duration)
+    await ctx.send(f"Updated mute duration for {member.mention} to {duration}. (Case #{case_id})")
 
 @bot.hybrid_command(description="Kicks a member from the server.")
 @app_commands.describe(reason="Reason for the kick")
-@commands.has_permissions(kick_members=True)
+@has_permission('MOD_ROLE_ID')
 async def kick(ctx, member: discord.Member, *, reason: str = "No reason provided"):
+    case_id = database.log_action("KICK", member.id, ctx.author.id, reason)
+    await send_dm_log(member, "Kicked", reason, case_id, ctx.guild.name)
     await member.kick(reason=reason)
-    database.log_action("KICK", member.id, ctx.author.id, reason)
-    await ctx.send(f"{member.mention} has been kicked. Reason: {reason}")
+    await ctx.send(f"{member.mention} has been kicked. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(description="Softbans a member (ban then unban) to delete messages.")
 @app_commands.describe(reason="Reason for the softban")
-@commands.has_permissions(ban_members=True)
+@has_permission('SR_ADMIN_ROLE_ID')
 async def softban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
+    case_id = database.log_action("SOFTBAN", member.id, ctx.author.id, reason)
+    await send_dm_log(member, "Softbanned", reason, case_id, ctx.guild.name)
     await member.ban(reason=reason, delete_message_seconds=86400)
     await member.unban(reason="Softban unban")
-    database.log_action("SOFTBAN", member.id, ctx.author.id, reason)
-    await ctx.send(f"{member.mention} has been softbanned.")
+    await ctx.send(f"{member.mention} has been softbanned. (Case #{case_id})")
 
 @bot.hybrid_command(description="Locks the current channel.")
-@commands.has_permissions(manage_channels=True)
+@has_permission('ADMIN_ROLE_ID')
 async def lock(ctx):
     await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
     database.log_action("LOCK", 0, ctx.author.id, "Channel locked", str(ctx.channel.id))
     await ctx.send(f"Channel {ctx.channel.mention} has been locked.")
 
 @bot.hybrid_command(description="Unlocks the current channel.")
-@commands.has_permissions(manage_channels=True)
+@has_permission('ADMIN_ROLE_ID')
 async def unlock(ctx):
     await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
     database.log_action("UNLOCK", 0, ctx.author.id, "Channel unlocked", str(ctx.channel.id))
@@ -216,7 +323,7 @@ async def unlock(ctx):
 
 @bot.hybrid_command(description="Gives a temporary role to a user.")
 @app_commands.describe(member="The member", role="The role to give", duration="Duration (e.g. 10m)")
-@commands.has_permissions(manage_roles=True)
+@has_permission('ADMIN_ROLE_ID')
 async def temprole(ctx, member: discord.Member, role: discord.Role, duration: str):
     delta = convert_duration(duration)
     if not delta:
@@ -237,32 +344,29 @@ async def temprole(ctx, member: discord.Member, role: discord.Role, duration: st
 
 @bot.hybrid_command(description="Warns a member.")
 @app_commands.describe(reason="Reason for the warning")
-@commands.has_permissions(manage_messages=True)
+@has_permission('JR_MOD_ROLE_ID')
 async def warn(ctx, member: discord.Member, *, reason: str = "No reason provided"):
     database.add_warning(member.id, reason, ctx.author.id)
-    database.log_action("WARN", member.id, ctx.author.id, reason)
-    try:
-        await member.send(f"You have been warned in {ctx.guild.name}. Reason: {reason}")
-    except discord.Forbidden:
-        pass
-    await ctx.send(f"{member.mention} has been warned. Reason: {reason}")
+    case_id = database.log_action("WARN", member.id, ctx.author.id, reason)
+    await send_dm_log(member, "Warned", reason, case_id, ctx.guild.name)
+    await ctx.send(f"{member.mention} has been warned. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(name="warn-remove", description="Removes a specific warning.")
 @app_commands.describe(user_id="ID of the user", warn_id="ID of the warning to remove")
-@commands.has_permissions(manage_messages=True)
+@has_permission('MOD_ROLE_ID')
 async def warn_remove(ctx, user_id: str, warn_id: int):
     try:
         user_id_int = int(user_id)
         if database.remove_warning(warn_id, user_id_int):
-            database.log_action("WARN_REMOVE", user_id_int, ctx.author.id, f"Removed warning {warn_id}")
-            await ctx.send(f"Removed warning {warn_id} for user {user_id}.")
+            case_id = database.log_action("WARN_REMOVE", user_id_int, ctx.author.id, f"Removed warning {warn_id}")
+            await ctx.send(f"Removed warning {warn_id} for user {user_id}. (Case #{case_id})")
         else:
             await ctx.send(f"Warning {warn_id} not found for user {user_id}.", ephemeral=True)
     except ValueError:
         await ctx.send("Invalid User ID format.", ephemeral=True)
 
 @bot.hybrid_command(description="Lists warnings for a specific member.")
-@commands.has_permissions(manage_messages=True)
+@has_permission('JR_MOD_ROLE_ID')
 async def warnings(ctx, member: discord.Member):
     warnings_list = database.get_warnings(member.id)
     if not warnings_list:
@@ -284,7 +388,7 @@ async def warnings(ctx, member: discord.Member):
 
 @bot.hybrid_command(description="Adds a note to a user.")
 @app_commands.describe(user_id="ID of the user", text="The note content")
-@commands.has_permissions(manage_messages=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def note(ctx, user_id: str, *, text: str):
     try:
         user_id_int = int(user_id)
@@ -296,7 +400,7 @@ async def note(ctx, user_id: str, *, text: str):
 
 @bot.hybrid_command(description="Deletes a specific note.")
 @app_commands.describe(user_id="ID of the user", note_id="ID of the note to delete")
-@commands.has_permissions(manage_messages=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def delnote(ctx, user_id: str, note_id: int):
     try:
         user_id_int = int(user_id)
@@ -310,7 +414,7 @@ async def delnote(ctx, user_id: str, note_id: int):
 
 @bot.hybrid_command(description="Shows all notes for a user.")
 @app_commands.describe(user_id="ID of the user")
-@commands.has_permissions(manage_messages=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def notes(ctx, user_id: str):
     try:
         user_id_int = int(user_id)
@@ -334,7 +438,7 @@ async def notes(ctx, user_id: str):
 
 @bot.hybrid_command(description="Clears all notes for a user.")
 @app_commands.describe(user_id="ID of the user")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_MOD_ROLE_ID')
 async def clearnotes(ctx, user_id: str):
     try:
         user_id_int = int(user_id)
@@ -346,7 +450,7 @@ async def clearnotes(ctx, user_id: str):
 
 @bot.hybrid_command(description="Edits a note.")
 @app_commands.describe(user_id="ID of the user", note_id="ID of the note", new_text="New note content")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_MOD_ROLE_ID')
 async def editnote(ctx, user_id: str, note_id: int, *, new_text: str):
     try:
         user_id_int = int(user_id)
@@ -360,22 +464,23 @@ async def editnote(ctx, user_id: str, note_id: int, *, new_text: str):
 
 @bot.hybrid_command(description="Bans a member from the server.")
 @app_commands.describe(reason="Reason for the ban")
-@commands.has_permissions(ban_members=True)
+@has_permission('MOD_ROLE_ID')
 async def ban(ctx, member: discord.Member, *, reason: str = "No reason provided"):
+    case_id = database.log_action("BAN", member.id, ctx.author.id, reason)
+    await send_dm_log(member, "Banned", reason, case_id, ctx.guild.name)
     await member.ban(reason=reason)
-    database.log_action("BAN", member.id, ctx.author.id, reason)
-    await ctx.send(f"{member.mention} has been banned. Reason: {reason}")
+    await ctx.send(f"{member.mention} has been banned. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(description="Unbans a user from the server using their ID.")
 @app_commands.describe(user_id="The ID of the user to unban", reason="Reason for the unban")
-@commands.has_permissions(ban_members=True)
+@has_permission('MOD_ROLE_ID')
 async def unban(ctx, user_id: str, *, reason: str = "No reason provided"):
     try:
         user_id_int = int(user_id)
         user = await bot.fetch_user(user_id_int)
         await ctx.guild.unban(user, reason=reason)
-        database.log_action("UNBAN", user_id_int, ctx.author.id, reason)
-        await ctx.send(f"{user.mention} has been unbanned. Reason: {reason}")
+        case_id = database.log_action("UNBAN", user_id_int, ctx.author.id, reason)
+        await ctx.send(f"{user.mention} has been unbanned. Reason: {reason} (Case #{case_id})")
     except ValueError:
         await ctx.send("Invalid User ID format.", ephemeral=True)
     except discord.NotFound:
@@ -385,7 +490,7 @@ async def unban(ctx, user_id: str, *, reason: str = "No reason provided"):
 
 @bot.hybrid_command(description="Star a message (send content/embed to a channel).")
 @app_commands.describe(message_id="ID of the message to star")
-@commands.has_permissions(manage_messages=True)
+@has_permission('LOW_STAFF_ROLE_ID')
 async def star(ctx, message_id: str):
     # Retrieve target channel from env or config. Using placeholder for now as requested.
     STAR_CHANNEL_ID = int(os.getenv('STAR_CHANNEL_ID', 0))
@@ -436,7 +541,7 @@ async def av(ctx, user_id: str):
 
 @bot.hybrid_command(description="Shows moderation logs (warns, mutes) for a user.")
 @app_commands.describe(user_id="ID of the user")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_MOD_ROLE_ID')
 async def modlogs(ctx, user_id: str):
     try:
         user_id_int = int(user_id)
@@ -448,13 +553,13 @@ async def modlogs(ctx, user_id: str):
 
         embed = discord.Embed(title=f"Mod Logs for {user_id}", color=discord.Color.red())
         # Discord embed fields have limits, so we slice if too many, or just show last 10
-        for action, staff_id, reason, timestamp, extra in logs[-10:]:
+        for case_id, action, staff_id, reason, timestamp, extra in logs[-10:]:
              staff_member = ctx.guild.get_member(staff_id)
              staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
              value_str = f"**Staff:** {staff_name}\n**Reason:** {reason}"
              if extra:
                  value_str += f"\n**Extra:** {extra}"
-             embed.add_field(name=f"{action} | {timestamp[:10]}", value=value_str, inline=False)
+             embed.add_field(name=f"Case #{case_id} | {action} | {timestamp[:10]}", value=value_str, inline=False)
 
         await ctx.send(embed=embed)
     except ValueError:
@@ -462,7 +567,7 @@ async def modlogs(ctx, user_id: str):
 
 @bot.hybrid_command(description="Shows stats for a moderator.")
 @app_commands.describe(user_id="ID of the moderator")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_ADMIN_ROLE_ID')
 async def modstats(ctx, user_id: str):
     try:
         user_id_int = int(user_id)
@@ -481,7 +586,7 @@ async def modstats(ctx, user_id: str):
         await ctx.send("Invalid User ID format.", ephemeral=True)
 
 @bot.hybrid_command(description="Shows recent moderation actions.")
-@commands.has_permissions(manage_messages=True)
+@has_permission('SR_ADMIN_ROLE_ID')
 async def moderations(ctx):
     logs = database.get_recent_moderations(limit=10) # Showing 10 to fit in one embed easily
 
@@ -541,6 +646,40 @@ async def eight_ball(ctx, *, question: str):
         "Very doubtful."
     ]
     await ctx.send(f'Question: {question}\nAnswer: {random.choice(responses)}')
+
+@bot.hybrid_command(description="Shows details of a specific moderation case.")
+@app_commands.describe(case_id="ID of the case to look up")
+@has_permission('ADMIN_ROLE_ID')
+async def case(ctx, case_id: int):
+    log = database.get_case(case_id)
+    if not log:
+        await ctx.send(f"Case #{case_id} not found.")
+        return
+
+    # log structure: (id, action, user_id, staff_id, reason, timestamp, extra_data)
+    _, action, user_id, staff_id, reason, timestamp, extra_data = log
+
+    staff_member = ctx.guild.get_member(staff_id)
+    staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
+
+    embed = discord.Embed(title=f"Case #{case_id} | {action}", color=discord.Color.gold())
+    embed.add_field(name="User", value=f"<@{user_id}> ({user_id})", inline=True)
+    embed.add_field(name="Staff", value=f"{staff_name} ({staff_id})", inline=True)
+    embed.add_field(name="Timestamp", value=f"{timestamp[:19]}", inline=False)
+    embed.add_field(name="Reason", value=reason, inline=False)
+
+    if extra_data:
+        embed.add_field(name="Extra Data", value=extra_data, inline=False)
+
+    await ctx.send(embed=embed)
+
+@bot.hybrid_command(description="Unmutes a member.")
+@app_commands.describe(member="The member to unmute")
+@has_permission('LOW_STAFF_ROLE_ID')
+async def unmute(ctx, member: discord.Member):
+    await member.timeout(None, reason="Unmuted by staff")
+    case_id = database.log_action("UNMUTE", member.id, ctx.author.id, "Unmuted by staff")
+    await ctx.send(f"{member.mention} has been unmuted. (Case #{case_id})")
 
 if __name__ == '__main__':
     if TOKEN:
