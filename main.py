@@ -793,7 +793,10 @@ async def unmute(ctx, member: discord.Member):
 
 if __name__ == '__main__':
     if TOKEN:
-        bot.run(TOKEN)
+        try:
+            bot.run(TOKEN)
+        except discord.errors.LoginFailure:
+            print("Error: Invalid Discord Token. Please check your .env file and ensure DISCORD_TOKEN is correct.")
     else:
         print("Error: DISCORD_TOKEN not found in environment variables.")
         print("Please create a .env file (you can copy .env.example) and add your DISCORD_TOKEN.")
