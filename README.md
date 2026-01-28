@@ -58,15 +58,15 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 
 ## Notes
 
-*   `/note <user_id> <text>`: Adds a note to a user.
-*   `/delnote <user_id> <note_id>`: Deletes a specific note.
-*   `/notes <user_id>`: Shows all notes for a user.
-*   `/clearnotes <user_id>`: Clears all notes for a user.
-*   `/editnote <user_id> <note_id> <new_text>`: Edits a note.
+*   `/note <user_id> <text>`: Adds a note to a user. Requires **Low Staff** or higher.
+*   `/delnote <user_id> <note_id>`: Deletes a specific note. Requires **Low Staff** or higher.
+*   `/notes <user_id>`: Shows all notes for a user. Requires **Low Staff** or higher.
+*   `/clearnotes <user_id>`: Clears all notes for a user. Requires **Sr Mod** or higher.
+*   `/editnote <user_id> <note_id> <new_text>`: Edits a note. Requires **Sr Mod** or higher.
 
 ## Utilities
 
-*   `/star <message_id>`: Sends a message to the starred channel.
+*   `/star <message_id>`: Sends a message to the starred channel. Requires **Low Staff** or higher.
 *   `/av <user_id>`: Displays a user's avatar.
 
 ### Automatic Starboard
