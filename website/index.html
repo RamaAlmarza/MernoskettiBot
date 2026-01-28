@@ -20,7 +20,7 @@
 
     <div id="commands-section">
         <div class="command-category">
-            <h2>General</h2>
+            <h2>Features</h2>
             <ul class="command-list">
                 <li class="command-item">
                     <span class="command-name">/ping</span>
@@ -32,25 +32,15 @@
                 </li>
                 <li class="command-item">
                     <span class="command-name">/roll [sides]</span>
-                    <span class="command-desc">Rolls a dice with the specified number of sides (default 6).</span>
+                    <span class="command-desc">Rolls a dice with the specified number of sides (default is 6).</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/8ball &lt;question&gt;</span>
-                    <span class="command-desc">Provides a magic 8-ball response.</span>
+                    <span class="command-desc">Provides a magic 8-ball response to your question.</span>
                 </li>
-                <li class="command-item">
-                    <span class="command-name">/av &lt;user_id&gt;</span>
-                    <span class="command-desc">Displays a user's avatar.</span>
-                </li>
-            </ul>
-        </div>
-
-        <div class="command-category">
-            <h2>Ticket System</h2>
-            <ul class="command-list">
                 <li class="command-item">
                     <span class="command-name">/setup_ticket</span>
-                    <span class="command-desc">Creates a panel with a dropdown menu to open support tickets.</span>
+                    <span class="command-desc">Creates a panel with a dropdown menu to open support tickets (Roles, Report Staff, Report User, Questions, Others). <strong>Ticket Controls:</strong> Tickets include a "Close Ticket" button for all users and a "Claim Ticket" button for staff (requires <code>manage_messages</code> permission).</span>
                 </li>
             </ul>
         </div>
@@ -60,63 +50,71 @@
             <ul class="command-list">
                 <li class="command-item">
                     <span class="command-name">/mute &lt;member&gt; &lt;duration&gt; [reason]</span>
-                    <span class="command-desc">Mutes a member for the specified duration.</span>
+                    <span class="command-desc">Mutes a member. Requires <strong>Low Staff</strong> or higher.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/unmute &lt;member&gt;</span>
+                    <span class="command-desc">Unmutes a member. Requires <strong>Low Staff</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/duration &lt;member&gt; &lt;duration&gt;</span>
-                    <span class="command-desc">Modifies the mute duration for a user.</span>
+                    <span class="command-desc">Modifies the mute duration for a user. Requires <strong>Low Staff</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/warn &lt;member&gt; [reason]</span>
-                    <span class="command-desc">Warns a member.</span>
+                    <span class="command-desc">Warns a member. Requires <strong>Jr Mod</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/warn-remove &lt;user_id&gt; &lt;warn_id&gt;</span>
-                    <span class="command-desc">Removes a specific warning.</span>
+                    <span class="command-desc">Removes a specific warning. Requires <strong>Mod</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/warnings &lt;member&gt;</span>
-                    <span class="command-desc">Lists warnings for a specific member.</span>
+                    <span class="command-desc">Lists warnings for a specific member. Requires <strong>Jr Mod</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/ban &lt;member&gt; [reason]</span>
-                    <span class="command-desc">Bans a member from the server.</span>
+                    <span class="command-desc">Bans a member. Requires <strong>Mod</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/unban &lt;user_id&gt; [reason]</span>
-                    <span class="command-desc">Unbans a user from the server using their ID.</span>
+                    <span class="command-desc">Unbans a user. Requires <strong>Mod</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/kick &lt;member&gt; [reason]</span>
-                    <span class="command-desc">Kicks a member from the server.</span>
+                    <span class="command-desc">Kicks a member. Requires <strong>Mod</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/softban &lt;member&gt; [reason]</span>
-                    <span class="command-desc">Bans and instantly unbans a user to delete their messages.</span>
+                    <span class="command-desc">Softbans a user. Requires <strong>Sr Admin</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/lock</span>
-                    <span class="command-desc">Locks the current channel.</span>
+                    <span class="command-desc">Locks the current channel. Requires <strong>Admin</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/unlock</span>
-                    <span class="command-desc">Unlocks the current channel.</span>
+                    <span class="command-desc">Unlocks the current channel. Requires <strong>Admin</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/temprole &lt;member&gt; &lt;role&gt; &lt;duration&gt;</span>
-                    <span class="command-desc">Gives a temporary role to a user.</span>
+                    <span class="command-desc">Gives a temporary role. Requires <strong>Admin</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/modlogs &lt;user_id&gt;</span>
-                    <span class="command-desc">Shows all interactions with a user.</span>
+                    <span class="command-desc">Shows logs for a user. Requires <strong>Sr Mod</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/modstats &lt;user_id&gt;</span>
-                    <span class="command-desc">Shows statistics of a moderator's actions.</span>
+                    <span class="command-desc">Shows stats of a moderator. Requires <strong>Sr Admin</strong> or higher.</span>
                 </li>
                 <li class="command-item">
                     <span class="command-name">/moderations</span>
-                    <span class="command-desc">Shows the last 50 moderation actions.</span>
+                    <span class="command-desc">Shows recent moderation actions. Requires <strong>Sr Admin</strong> or higher.</span>
+                </li>
+                <li class="command-item">
+                    <span class="command-name">/case &lt;case_id&gt;</span>
+                    <span class="command-desc">Shows details of a specific moderation case. Requires <strong>Admin</strong> or higher.</span>
                 </li>
             </ul>
         </div>
@@ -155,8 +153,8 @@
                     <span class="command-desc">Sends a message to the starred channel.</span>
                 </li>
                 <li class="command-item">
-                    <span class="command-name">!sync</span>
-                    <span class="command-desc">Syncs slash commands (Owner only).</span>
+                    <span class="command-name">/av &lt;user_id&gt;</span>
+                    <span class="command-desc">Displays a user's avatar.</span>
                 </li>
             </ul>
         </div>
