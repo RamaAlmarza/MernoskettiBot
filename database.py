@@ -52,10 +52,90 @@ def init_db():
         )
     """)
 
+    # Guild Config table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS guild_config (
+            guild_id INTEGER PRIMARY KEY,
+            prefix TEXT DEFAULT '!',
+            autorole_id INTEGER DEFAULT 0
+        )
+    """)
+
+    # Ranking table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ranking (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            points INTEGER DEFAULT 0
+        )
+    """)
+
     conn.commit()
     conn.close()
 
 # --- Warnings ---
+
+def get_config(guild_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT prefix, autorole_id FROM guild_config WHERE guild_id = ?", (guild_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"prefix": row[0], "autorole_id": row[1]}
+    return {"prefix": "!", "autorole_id": 0}
+
+def set_config(guild_id, prefix=None, autorole_id=None):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT prefix, autorole_id FROM guild_config WHERE guild_id = ?", (guild_id,))
+    row = cursor.fetchone()
+
+    if row:
+        curr_prefix, curr_autorole = row
+        new_prefix = prefix if prefix is not None else curr_prefix
+        new_autorole = autorole_id if autorole_id is not None else curr_autorole
+        cursor.execute("UPDATE guild_config SET prefix = ?, autorole_id = ? WHERE guild_id = ?", (new_prefix, new_autorole, guild_id))
+    else:
+        new_prefix = prefix if prefix is not None else "!"
+        new_autorole = autorole_id if autorole_id is not None else 0
+        cursor.execute("INSERT INTO guild_config (guild_id, prefix, autorole_id) VALUES (?, ?, ?)", (guild_id, new_prefix, new_autorole))
+
+    conn.commit()
+    conn.close()
+
+# --- Ranking ---
+
+def update_points(user_id, username, points):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO ranking (user_id, username, points) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET points = points + ?, username = ?", (user_id, username, points, points, username))
+    conn.commit()
+    conn.close()
+
+def set_points(user_id, username, points):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO ranking (user_id, username, points) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET points = ?, username = ?", (user_id, username, points, points, username))
+    conn.commit()
+    conn.close()
+
+def get_points(user_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT points FROM ranking WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else 0
+
+def get_ranking():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id, username, points FROM ranking ORDER BY points DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
 
 def add_warning(user_id, reason, staff_id):
     conn = sqlite3.connect(DB_NAME)
@@ -74,6 +154,14 @@ def get_warnings(user_id):
     cursor.execute("""
         SELECT id, reason, staff_id, timestamp FROM warnings WHERE user_id = ?
     """, (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def get_all_warnings():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, user_id, reason, staff_id, timestamp FROM warnings ORDER BY id DESC")
     rows = cursor.fetchall()
     conn.close()
     return rows

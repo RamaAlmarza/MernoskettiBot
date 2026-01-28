@@ -3,10 +3,7 @@ import random
 import asyncio
 import datetime
 import discord
-import csv
-import json
 from discord import app_commands
-from discord.ui import View, Button, Modal, TextInput
 from discord.ext import commands
 from dotenv import load_dotenv
 import database

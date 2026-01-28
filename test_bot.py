@@ -66,3 +66,22 @@ async def test_starboard_functions_exist():
     assert hasattr(database, 'get_starboard_entry')
     assert hasattr(database, 'add_starboard_entry')
     assert hasattr(database, 'update_starboard_entry')
+
+@pytest.mark.asyncio
+async def test_readded_features_exist():
+    assert bot.get_command('prefix') is not None
+    assert bot.get_command('announce') is not None
+    assert bot.get_command('clear') is not None
+    assert bot.get_command('autorole') is not None
+    assert bot.get_command('addpoints') is not None
+    assert bot.get_command('removepoints') is not None
+    assert bot.get_command('getpoints') is not None
+    assert bot.get_command('ranking') is not None
+    assert bot.get_command('allwarnings') is not None
+    assert bot.get_command('csv') is not None
+    assert bot.get_command('addcsv') is not None
+    assert bot.get_command('removecsv') is not None
+    assert bot.get_command('resetcsv') is not None
+    assert bot.get_command('userinfo') is not None
+    assert bot.get_command('serverinfo') is not None
+    assert bot.get_command('servericon') is not None
