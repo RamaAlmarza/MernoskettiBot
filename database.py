@@ -42,6 +42,16 @@ def init_db():
         )
     """)
 
+    # Starboard table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS starboard (
+            message_id INTEGER PRIMARY KEY,
+            star_message_id INTEGER NOT NULL,
+            channel_id INTEGER NOT NULL,
+            count INTEGER NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -188,6 +198,31 @@ def get_recent_moderations(limit=50):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+# --- Starboard ---
+
+def get_starboard_entry(message_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT star_message_id, channel_id, count FROM starboard WHERE message_id = ?", (message_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def add_starboard_entry(message_id, star_message_id, channel_id, count):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO starboard (message_id, star_message_id, channel_id, count) VALUES (?, ?, ?, ?)",
+                   (message_id, star_message_id, channel_id, count))
+    conn.commit()
+    conn.close()
+
+def update_starboard_entry(message_id, count):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE starboard SET count = ? WHERE message_id = ?", (count, message_id))
+    conn.commit()
+    conn.close()
 
 # Initialize DB on module load (or call it explicitly in main)
 init_db()

@@ -13,7 +13,8 @@ This is a basic Discord bot template written in Python using `discord.py`.
     *   Copy `.env.example` to `.env`.
     *   Replace `your_token_here` with your actual Discord bot token.
     *   Set the Role IDs for permissions (Low Staff, Jr Mod, Mod, Sr Mod, Admin, Sr Admin).
-    *   Set `STAR_CHANNEL_ID` for the `/star` command.
+    *   Set `STAR_CHANNEL_ID` for the `/star` command and automatic Starboard.
+    *   Set `STAR_THRESHOLD` (default 5) for the automatic Starboard.
 
     ```bash
     cp .env.example .env
@@ -66,6 +67,10 @@ All commands can be used with the prefix `!` or as Slash Commands (e.g., `/ping`
 
 *   `/star <message_id>`: Sends a message to the starred channel.
 *   `/av <user_id>`: Displays a user's avatar.
+
+### Automatic Starboard
+
+Messages that receive 5 (or configured `STAR_THRESHOLD`) ⭐ reactions are automatically posted to the configured `STAR_CHANNEL_ID` as an embed. If more stars are added, the count updates automatically.
 
 ## Utilities
 

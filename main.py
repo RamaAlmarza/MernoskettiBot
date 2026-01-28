@@ -19,6 +19,7 @@ MOD_ROLE_ID = int(os.getenv('MOD_ROLE_ID', 0))
 SR_MOD_ROLE_ID = int(os.getenv('SR_MOD_ROLE_ID', 0))
 ADMIN_ROLE_ID = int(os.getenv('ADMIN_ROLE_ID', 0))
 SR_ADMIN_ROLE_ID = int(os.getenv('SR_ADMIN_ROLE_ID', 0))
+STAR_THRESHOLD = int(os.getenv('STAR_THRESHOLD', 5))
 
 # Set up intents
 intents = discord.Intents.default()
@@ -119,6 +120,60 @@ async def on_ready():
 
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
+
+@bot.event
+async def on_raw_reaction_add(payload):
+    if str(payload.emoji) != '⭐':
+        return
+
+    STAR_CHANNEL_ID = int(os.getenv('STAR_CHANNEL_ID', 0))
+    if not STAR_CHANNEL_ID:
+        return
+
+    channel = bot.get_channel(payload.channel_id)
+    if not channel:
+        return
+
+    try:
+        message = await channel.fetch_message(payload.message_id)
+    except discord.NotFound:
+        return
+
+    # Count star reactions
+    reaction = discord.utils.get(message.reactions, emoji='⭐')
+    if not reaction:
+        return
+
+    count = reaction.count
+
+    # Check DB
+    entry = database.get_starboard_entry(message.id)
+
+    if entry:
+        star_message_id, _, _ = entry
+        star_channel = bot.get_channel(STAR_CHANNEL_ID)
+        if star_channel:
+            try:
+                star_message = await star_channel.fetch_message(star_message_id)
+                await star_message.edit(content=f"⭐ {count} {channel.mention}")
+                database.update_starboard_entry(message.id, count)
+            except discord.NotFound:
+                pass # Star message deleted manually?
+    elif count >= STAR_THRESHOLD:
+        star_channel = bot.get_channel(STAR_CHANNEL_ID)
+        if not star_channel:
+            return
+
+        embed = discord.Embed(description=message.content, color=discord.Color.gold())
+        embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
+        embed.add_field(name="Source", value=f"[Jump!]({message.jump_url})")
+        embed.set_footer(text=f"{message.id} • {message.created_at.strftime('%Y-%m-%d %H:%M')}")
+
+        if message.attachments:
+            embed.set_image(url=message.attachments[0].url)
+
+        sent_message = await star_channel.send(content=f"⭐ {count} {channel.mention}", embed=embed)
+        database.add_starboard_entry(message.id, sent_message.id, STAR_CHANNEL_ID, count)
 
 @bot.command()
 @commands.is_owner()

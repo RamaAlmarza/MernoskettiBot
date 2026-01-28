@@ -2,6 +2,7 @@ import pytest
 import discord
 from discord.ext import commands
 from main import bot
+import database
 
 @pytest.mark.asyncio
 async def test_ping_command_exists():
@@ -58,3 +59,9 @@ async def test_utility_commands_exist():
 @pytest.mark.asyncio
 async def test_sync_command_exists():
     assert bot.get_command('sync') is not None
+
+@pytest.mark.asyncio
+async def test_starboard_functions_exist():
+    assert hasattr(database, 'get_starboard_entry')
+    assert hasattr(database, 'add_starboard_entry')
+    assert hasattr(database, 'update_starboard_entry')
