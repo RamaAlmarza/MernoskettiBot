@@ -820,15 +820,6 @@ async def unmute(ctx, member: discord.Member):
     except discord.Forbidden:
         await ctx.send("I do not have permission to perform this action on this user. They might have a higher role than me.", ephemeral=True)
 
-if __name__ == '__main__':
-    if TOKEN:
-        try:
-            bot.run(TOKEN)
-        except discord.errors.LoginFailure:
-            print("Error: Invalid Discord Token. Please check your .env file and ensure DISCORD_TOKEN is correct.")
-    else:
-        print("Error: DISCORD_TOKEN not found in environment variables.")
-        print("Please create a .env file (you can copy .env.example) and add your DISCORD_TOKEN.")
 # Config
 CSV_FILE = "devoluciones.csv"
 # Users allowed to use CSV commands (IDs from user input)
@@ -1085,3 +1076,13 @@ async def resetcsv(ctx):
         return
     view = ResetCSVView(ctx)
     await ctx.send("⚠️ Reset CSV?", view=view)
+
+if __name__ == '__main__':
+    if TOKEN:
+        try:
+            bot.run(TOKEN)
+        except discord.errors.LoginFailure:
+            print("Error: Invalid Discord Token. Please check your .env file and ensure DISCORD_TOKEN is correct.")
+    else:
+        print("Error: DISCORD_TOKEN not found in environment variables.")
+        print("Please create a .env file (you can copy .env.example) and add your DISCORD_TOKEN.")

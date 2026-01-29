@@ -61,6 +61,12 @@ def init_db():
         )
     """)
 
+    # Migration: Check if autorole_id column exists
+    cursor.execute("PRAGMA table_info(guild_config)")
+    columns = [info[1] for info in cursor.fetchall()]
+    if "autorole_id" not in columns:
+        cursor.execute("ALTER TABLE guild_config ADD COLUMN autorole_id INTEGER DEFAULT 0")
+
     # Ranking table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ranking (
