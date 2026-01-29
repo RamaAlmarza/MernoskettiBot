@@ -64,6 +64,7 @@ def has_permission(min_role_name):
 # Set up intents
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 
 def get_prefix_for_bot(bot, message):
     if not message.guild:
@@ -237,11 +238,11 @@ async def on_raw_reaction_add(payload):
         sent_message = await star_channel.send(content=f"⭐ {count} {channel.mention}", embed=embed)
         database.add_starboard_entry(message.id, sent_message.id, STAR_CHANNEL_ID, count)
 
-@bot.hybrid_command(description="Syncs commands (default: local guild). Args: global, clear")
-@app_commands.describe(action="Action: 'global' (sync globally), 'clear' (clear guild), or leave empty (sync local)")
+@bot.hybrid_command(description="Syncs commands (default: local guild). Args: global, clear, clearglobal")
+@app_commands.describe(action="Action: 'global', 'clear', 'clearglobal', or empty")
 @has_permission('ADMIN_ROLE_ID')
 async def sync(ctx, action: str = None):
-    """Syncs commands. Usage: !sync [global|clear]"""
+    """Syncs commands. Usage: !sync [global|clear|clearglobal]"""
     if action == "global":
         msg = await ctx.send("Syncing global commands... (This may take up to an hour to propagate)")
         try:
@@ -249,6 +250,15 @@ async def sync(ctx, action: str = None):
             await msg.edit(content=f"Synced {len(synced)} global command(s).")
         except Exception as e:
             await msg.edit(content=f"Failed to sync global commands: {e}")
+
+    elif action == "clearglobal":
+        msg = await ctx.send("Clearing global commands... (This may take up to an hour to propagate)")
+        try:
+            bot.tree.clear_commands(guild=None)
+            await bot.tree.sync()
+            await msg.edit(content="Cleared global commands.")
+        except Exception as e:
+            await msg.edit(content=f"Failed to clear global commands: {e}")
 
     elif action == "clear":
         try:
