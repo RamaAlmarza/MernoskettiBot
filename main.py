@@ -482,18 +482,14 @@ async def warn(ctx, member: discord.Member, *, reason: str = "No reason provided
     await ctx.send(f"{member.mention} has been warned. Reason: {reason} (Case #{case_id})")
 
 @bot.hybrid_command(name="warn-remove", description="Removes a specific warning.")
-@app_commands.describe(user_id="ID of the user", warn_id="ID of the warning to remove")
+@app_commands.describe(user="The user", warn_id="ID of the warning to remove")
 @has_permission('MOD_ROLE_ID')
-async def warn_remove(ctx, user_id: str, warn_id: int):
-    try:
-        user_id_int = int(user_id)
-        if database.remove_warning(warn_id, user_id_int):
-            case_id = database.log_action("WARN_REMOVE", user_id_int, ctx.author.id, f"Removed warning {warn_id}")
-            await ctx.send(f"Removed warning {warn_id} for user {user_id}. (Case #{case_id})")
-        else:
-            await ctx.send(f"Warning {warn_id} not found for user {user_id}.", ephemeral=True)
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
+async def warn_remove(ctx, user: discord.User, warn_id: int):
+    if database.remove_warning(warn_id, user.id):
+        case_id = database.log_action("WARN_REMOVE", user.id, ctx.author.id, f"Removed warning {warn_id}")
+        await ctx.send(f"Removed warning {warn_id} for user {user.mention}. (Case #{case_id})")
+    else:
+        await ctx.send(f"Warning {warn_id} not found for user {user.mention}.", ephemeral=True)
 
 @bot.hybrid_command(description="Lists warnings for a specific member.")
 @has_permission('JR_MOD_ROLE_ID')
@@ -517,80 +513,60 @@ async def warnings(ctx, member: discord.Member):
 # --- Notes Commands ---
 
 @bot.hybrid_command(description="Adds a note to a user.")
-@app_commands.describe(user_id="ID of the user", text="The note content")
+@app_commands.describe(user="The user", text="The note content")
 @has_permission('LOW_STAFF_ROLE_ID')
-async def note(ctx, user_id: str, *, text: str):
-    try:
-        user_id_int = int(user_id)
-        database.add_note(user_id_int, text, ctx.author.id)
-        database.log_action("NOTE_ADD", user_id_int, ctx.author.id, "Added note", text)
-        await ctx.send(f"Note added for user {user_id}.")
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
+async def note(ctx, user: discord.User, *, text: str):
+    database.add_note(user.id, text, ctx.author.id)
+    database.log_action("NOTE_ADD", user.id, ctx.author.id, "Added note", text)
+    await ctx.send(f"Note added for user {user.mention}.")
 
 @bot.hybrid_command(description="Deletes a specific note.")
-@app_commands.describe(user_id="ID of the user", note_id="ID of the note to delete")
+@app_commands.describe(user="The user", note_id="ID of the note to delete")
 @has_permission('LOW_STAFF_ROLE_ID')
-async def delnote(ctx, user_id: str, note_id: int):
-    try:
-        user_id_int = int(user_id)
-        if database.delete_note(note_id, user_id_int):
-            database.log_action("NOTE_DELETE", user_id_int, ctx.author.id, f"Deleted note {note_id}")
-            await ctx.send(f"Deleted note {note_id} for user {user_id}.")
-        else:
-             await ctx.send(f"Note {note_id} not found for user {user_id}.", ephemeral=True)
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
+async def delnote(ctx, user: discord.User, note_id: int):
+    if database.delete_note(note_id, user.id):
+        database.log_action("NOTE_DELETE", user.id, ctx.author.id, f"Deleted note {note_id}")
+        await ctx.send(f"Deleted note {note_id} for user {user.mention}.")
+    else:
+        await ctx.send(f"Note {note_id} not found for user {user.mention}.", ephemeral=True)
 
 @bot.hybrid_command(description="Shows all notes for a user.")
-@app_commands.describe(user_id="ID of the user")
+@app_commands.describe(user="The user")
 @has_permission('LOW_STAFF_ROLE_ID')
-async def notes(ctx, user_id: str):
-    try:
-        user_id_int = int(user_id)
-        notes_list = database.get_notes(user_id_int)
-        if not notes_list:
-            await ctx.send(f"No notes found for user {user_id}.")
-            return
+async def notes(ctx, user: discord.User):
+    notes_list = database.get_notes(user.id)
+    if not notes_list:
+        await ctx.send(f"No notes found for user {user.mention}.")
+        return
 
-        embed = discord.Embed(title=f"Notes for User {user_id}", color=discord.Color.blue())
-        for note_id, text, staff_id, timestamp in notes_list:
-            staff_member = ctx.guild.get_member(staff_id)
-            staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
-            embed.add_field(
-                name=f"ID: {note_id} | Date: {timestamp[:10]}",
-                value=f"**Note:** {text}\n**Staff:** {staff_name}",
-                inline=False
-            )
-        await ctx.send(embed=embed)
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
+    embed = discord.Embed(title=f"Notes for User {user.name}", color=discord.Color.blue())
+    for note_id, text, staff_id, timestamp in notes_list:
+        staff_member = ctx.guild.get_member(staff_id)
+        staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
+        embed.add_field(
+            name=f"ID: {note_id} | Date: {timestamp[:10]}",
+            value=f"**Note:** {text}\n**Staff:** {staff_name}",
+            inline=False
+        )
+    await ctx.send(embed=embed)
 
 @bot.hybrid_command(description="Clears all notes for a user.")
-@app_commands.describe(user_id="ID of the user")
+@app_commands.describe(user="The user")
 @has_permission('SR_MOD_ROLE_ID')
-async def clearnotes(ctx, user_id: str):
-    try:
-        user_id_int = int(user_id)
-        database.clear_notes(user_id_int)
-        database.log_action("NOTE_CLEAR", user_id_int, ctx.author.id, "Cleared all notes")
-        await ctx.send(f"Cleared all notes for user {user_id}.")
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
+async def clearnotes(ctx, user: discord.User):
+    database.clear_notes(user.id)
+    database.log_action("NOTE_CLEAR", user.id, ctx.author.id, "Cleared all notes")
+    await ctx.send(f"Cleared all notes for user {user.mention}.")
 
 @bot.hybrid_command(description="Edits a note.")
-@app_commands.describe(user_id="ID of the user", note_id="ID of the note", new_text="New note content")
+@app_commands.describe(user="The user", note_id="ID of the note", new_text="New note content")
 @has_permission('SR_MOD_ROLE_ID')
-async def editnote(ctx, user_id: str, note_id: int, *, new_text: str):
-    try:
-        user_id_int = int(user_id)
-        if database.edit_note(note_id, new_text, user_id_int):
-            database.log_action("NOTE_EDIT", user_id_int, ctx.author.id, f"Edited note {note_id}", new_text)
-            await ctx.send(f"Edited note {note_id} for user {user_id}.")
-        else:
-             await ctx.send(f"Note {note_id} not found for user {user_id}.", ephemeral=True)
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
+async def editnote(ctx, user: discord.User, note_id: int, *, new_text: str):
+    if database.edit_note(note_id, new_text, user.id):
+        database.log_action("NOTE_EDIT", user.id, ctx.author.id, f"Edited note {note_id}", new_text)
+        await ctx.send(f"Edited note {note_id} for user {user.mention}.")
+    else:
+        await ctx.send(f"Note {note_id} not found for user {user.mention}.", ephemeral=True)
 
 @bot.hybrid_command(description="Bans a user from the server (even if not in server).")
 @app_commands.describe(user="The user to ban", reason="Reason for the ban")
@@ -605,20 +581,16 @@ async def ban(ctx, user: discord.User, *, reason: str = "No reason provided"):
     except discord.Forbidden:
         await ctx.send("I do not have permission to ban this user.", ephemeral=True)
 
-@bot.hybrid_command(description="Unbans a user from the server using their ID.")
-@app_commands.describe(user_id="The ID of the user to unban", reason="Reason for the unban")
+@bot.hybrid_command(description="Unbans a user from the server.")
+@app_commands.describe(user="The user to unban (ID or mention)", reason="Reason for the unban")
 @has_permission('MOD_ROLE_ID')
-async def unban(ctx, user_id: str, *, reason: str = "No reason provided"):
+async def unban(ctx, user: discord.User, *, reason: str = "No reason provided"):
     try:
-        user_id_int = int(user_id)
-        user = await bot.fetch_user(user_id_int)
         await ctx.guild.unban(user, reason=reason)
-        case_id = database.log_action("UNBAN", user_id_int, ctx.author.id, reason)
+        case_id = database.log_action("UNBAN", user.id, ctx.author.id, reason)
         await ctx.send(f"{user.mention} has been unbanned. Reason: {reason} (Case #{case_id})")
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
     except discord.NotFound:
-        await ctx.send("User not found.", ephemeral=True)
+        await ctx.send("User not found or not banned.", ephemeral=True)
     except discord.Forbidden:
         await ctx.send("I do not have permission to unban users.", ephemeral=True)
     except discord.HTTPException:
@@ -662,64 +634,49 @@ async def star(ctx, message_id: str):
         await ctx.send(f"An error occurred: {e}", ephemeral=True)
 
 @bot.hybrid_command(description="Displays a user's avatar.")
-@app_commands.describe(user_id="ID of the user")
-async def av(ctx, user_id: str):
-    try:
-        user_id_int = int(user_id)
-        user = await bot.fetch_user(user_id_int)
-        embed = discord.Embed(title=f"Avatar for {user.name}", color=discord.Color.blue())
-        embed.set_image(url=user.display_avatar.url)
-        await ctx.send(embed=embed)
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
-    except discord.NotFound:
-         await ctx.send("User not found.", ephemeral=True)
+@app_commands.describe(user="The user")
+async def av(ctx, user: discord.User):
+    embed = discord.Embed(title=f"Avatar for {user.name}", color=discord.Color.blue())
+    embed.set_image(url=user.display_avatar.url)
+    await ctx.send(embed=embed)
 
 @bot.hybrid_command(description="Shows moderation logs (warns, mutes) for a user.")
-@app_commands.describe(user_id="ID of the user")
+@app_commands.describe(user="The user")
 @has_permission('SR_MOD_ROLE_ID')
-async def modlogs(ctx, user_id: str):
-    try:
-        user_id_int = int(user_id)
-        logs = database.get_mod_logs(user_id_int)
+async def modlogs(ctx, user: discord.User):
+    logs = database.get_mod_logs(user.id)
 
-        if not logs:
-            await ctx.send(f"No moderation logs found for user {user_id}.")
-            return
+    if not logs:
+        await ctx.send(f"No moderation logs found for user {user.mention}.")
+        return
 
-        embed = discord.Embed(title=f"Mod Logs for {user_id}", color=discord.Color.red())
-        # Discord embed fields have limits, so we slice if too many, or just show last 10
-        for case_id, action, staff_id, reason, timestamp, extra in logs[-10:]:
-             staff_member = ctx.guild.get_member(staff_id)
-             staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
-             value_str = f"**Staff:** {staff_name}\n**Reason:** {reason}"
-             if extra:
-                 value_str += f"\n**Extra:** {extra}"
-             embed.add_field(name=f"Case #{case_id} | {action} | {timestamp[:10]}", value=value_str, inline=False)
+    embed = discord.Embed(title=f"Mod Logs for {user.name}", color=discord.Color.red())
+    # Discord embed fields have limits, so we slice if too many, or just show last 10
+    for case_id, action, staff_id, reason, timestamp, extra in logs[-10:]:
+        staff_member = ctx.guild.get_member(staff_id)
+        staff_name = staff_member.name if staff_member else f"ID: {staff_id}"
+        value_str = f"**Staff:** {staff_name}\n**Reason:** {reason}"
+        if extra:
+            value_str += f"\n**Extra:** {extra}"
+        embed.add_field(name=f"Case #{case_id} | {action} | {timestamp[:10]}", value=value_str, inline=False)
 
-        await ctx.send(embed=embed)
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
+    await ctx.send(embed=embed)
 
 @bot.hybrid_command(description="Shows stats for a moderator.")
-@app_commands.describe(user_id="ID of the moderator")
+@app_commands.describe(user="The moderator")
 @has_permission('SR_ADMIN_ROLE_ID')
-async def modstats(ctx, user_id: str):
-    try:
-        user_id_int = int(user_id)
-        stats = database.get_mod_stats(user_id_int)
+async def modstats(ctx, user: discord.User):
+    stats = database.get_mod_stats(user.id)
 
-        if not stats:
-            await ctx.send(f"No stats found for staff {user_id}.")
-            return
+    if not stats:
+        await ctx.send(f"No stats found for staff {user.mention}.")
+        return
 
-        embed = discord.Embed(title=f"Mod Stats for {user_id}", color=discord.Color.purple())
-        for action, count in stats:
-            embed.add_field(name=action, value=str(count), inline=True)
+    embed = discord.Embed(title=f"Mod Stats for {user.name}", color=discord.Color.purple())
+    for action, count in stats:
+        embed.add_field(name=action, value=str(count), inline=True)
 
-        await ctx.send(embed=embed)
-    except ValueError:
-        await ctx.send("Invalid User ID format.", ephemeral=True)
+    await ctx.send(embed=embed)
 
 @bot.hybrid_command(description="Shows recent moderation actions.")
 @has_permission('SR_ADMIN_ROLE_ID')
