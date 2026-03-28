@@ -76,6 +76,17 @@ def init_db():
         )
     """)
 
+    # Reaction Roles table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS reaction_roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id INTEGER NOT NULL,
+            message_id INTEGER NOT NULL,
+            emoji TEXT NOT NULL,
+            role_id INTEGER NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -317,6 +328,43 @@ def update_starboard_entry(message_id, count):
     cursor.execute("UPDATE starboard SET count = ? WHERE message_id = ?", (count, message_id))
     conn.commit()
     conn.close()
+
+# --- Reaction Roles ---
+
+def add_reaction_role(channel_id, message_id, emoji, role_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO reaction_roles (channel_id, message_id, emoji, role_id)
+        VALUES (?, ?, ?, ?)
+    """, (channel_id, message_id, emoji, role_id))
+    conn.commit()
+    conn.close()
+
+def get_reaction_role(message_id, emoji):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT role_id FROM reaction_roles WHERE message_id = ? AND emoji = ?", (message_id, emoji))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+def get_reaction_roles_by_message(message_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT emoji, role_id FROM reaction_roles WHERE message_id = ?", (message_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def remove_reaction_role(message_id, emoji):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM reaction_roles WHERE message_id = ? AND emoji = ?", (message_id, emoji))
+    affected = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return affected > 0
 
 # Initialize DB on module load (or call it explicitly in main)
 init_db()

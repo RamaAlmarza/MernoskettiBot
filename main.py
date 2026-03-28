@@ -186,6 +186,25 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
 
 @bot.event
 async def on_raw_reaction_add(payload):
+    # Check for reaction roles first
+    emoji_str = str(payload.emoji)
+    role_id = database.get_reaction_role(payload.message_id, emoji_str)
+
+    if role_id and payload.guild_id:
+        guild = bot.get_guild(payload.guild_id)
+        if guild:
+            member = guild.get_member(payload.user_id)
+            if member and not member.bot:
+                role = guild.get_role(role_id)
+                if role:
+                    try:
+                        await member.add_roles(role)
+                    except discord.Forbidden:
+                        pass
+                    except discord.HTTPException:
+                        pass
+
+    # Process Starboard
     if str(payload.emoji) != '⭐':
         return
 
@@ -237,6 +256,26 @@ async def on_raw_reaction_add(payload):
 
         sent_message = await star_channel.send(content=f"⭐ {count} {channel.mention}", embed=embed)
         database.add_starboard_entry(message.id, sent_message.id, STAR_CHANNEL_ID, count)
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    # Check for reaction roles
+    emoji_str = str(payload.emoji)
+    role_id = database.get_reaction_role(payload.message_id, emoji_str)
+
+    if role_id and payload.guild_id:
+        guild = bot.get_guild(payload.guild_id)
+        if guild:
+            member = guild.get_member(payload.user_id)
+            if member and not member.bot:
+                role = guild.get_role(role_id)
+                if role:
+                    try:
+                        await member.remove_roles(role)
+                    except discord.Forbidden:
+                        pass
+                    except discord.HTTPException:
+                        pass
 
 @bot.hybrid_command(description="Syncs commands (default: local guild). Args: global, clear, clearglobal")
 @app_commands.describe(action="Action: 'global', 'clear', 'clearglobal', or empty")
@@ -889,17 +928,24 @@ class ResetCSVView(View):
 
 # ---------- NEW FEATURES COMMANDS ----------
 
-@bot.hybrid_command(description="Sets the role to be given on member join.")
-@app_commands.describe(role="The role to give")
+@bot.hybrid_command(description="Configures autorole features (join roles or reaction roles).")
+@app_commands.describe(
+    subcommand="Subcommand: 'set', 'give', 'giveall', 'reaction'",
+    role="The role to give",
+    member="The member (for 'give')",
+    channel="Channel (for 'reaction')",
+    message_id="Message ID (for 'reaction')",
+    emoji="Emoji (for 'reaction')"
+)
 @has_permission('ADMIN_ROLE_ID')
-async def autorole(ctx, subcommand: str, role: discord.Role = None, member: discord.Member = None):
+async def autorole(ctx, subcommand: str, role: discord.Role = None, member: discord.Member = None, channel: discord.TextChannel = None, message_id: str = None, emoji: str = None):
     # Subcommands via arguments for simplicity in hybrid commands
     if subcommand.lower() == "set":
         if not role:
             await ctx.send("Please specify a role.", ephemeral=True)
             return
         database.set_config(ctx.guild.id, autorole_id=role.id)
-        await ctx.send(f"✅ Autorole set to {role.mention}")
+        await ctx.send(f"✅ Autorole (on join) set to {role.mention}")
     elif subcommand.lower() == "give" and member and role:
         await member.add_roles(role)
         await ctx.send(f"✅ Gave {role.mention} to {member.mention}")
@@ -915,8 +961,33 @@ async def autorole(ctx, subcommand: str, role: discord.Role = None, member: disc
                 except:
                     pass
         await ctx.send(f"✅ Gave {role.mention} to {count} members.")
+    elif subcommand.lower() == "reaction":
+        if not (channel and message_id and emoji and role):
+            await ctx.send("Usage for reaction roles: `/autorole reaction <channel> <message_id> <emoji> <role>`", ephemeral=True)
+            return
+        try:
+            msg_id_int = int(message_id)
+            target_msg = await channel.fetch_message(msg_id_int)
+        except (ValueError, discord.NotFound):
+            await ctx.send("Invalid message ID or message not found in the specified channel.", ephemeral=True)
+            return
+        except discord.Forbidden:
+            await ctx.send("I do not have access to read messages in that channel.", ephemeral=True)
+            return
+
+        try:
+            await target_msg.add_reaction(emoji)
+        except discord.HTTPException:
+            await ctx.send("Invalid emoji.", ephemeral=True)
+            return
+
+        # Optional: remove existing reaction role for that msg+emoji before adding new
+        database.remove_reaction_role(msg_id_int, emoji)
+        database.add_reaction_role(channel.id, msg_id_int, emoji, role.id)
+
+        await ctx.send(f"✅ Reaction role configured: Reacting to {target_msg.jump_url} with {emoji} gives {role.mention}.")
     else:
-        await ctx.send("Usage: `/autorole set <role>`, `/autorole give <member> <role>`, `/autorole giveall <role>`", ephemeral=True)
+        await ctx.send("Usage: `/autorole set <role>`, `/autorole give <member> <role>`, `/autorole giveall <role>`, `/autorole reaction <channel> <message_id> <emoji> <role>`", ephemeral=True)
 
 @bot.event
 async def on_member_join(member):
